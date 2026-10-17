@@ -1,308 +1,224 @@
-﻿# 快速反应（dsh-fast-react）
+<div align="center">
 
-> 前台低档快答快做 + 后台高档逐步规划的双会话编排插件。含独立 Web 控制台、会话组管理、模型/权限切换与 HTTP API。
+# ⚡ 快速反应 · dsh-fast-react
 
-## 安装
+**前台低档快答快做，后台高档逐步规划 —— 让两个会话像一条流水线那样干活**
+
+[![version](https://img.shields.io/badge/version-1.0.0-blue)](./package.json)
+[![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![platform](https://img.shields.io/badge/DeepSeek%20Harness-%E2%89%A5%200.2-6f42c1)](#-安装)
+
+[快速开始](#-安装) · [使用指南](#-五分钟上手) · [API](#-http-api) · [架构](./docs/技术路线.md) · [FAQ](#-faq)
+
+</div>
+
+---
+
+## 它是什么
+
+单会话 Agent 有个绕不开的矛盾：**低档模型快但做长任务会跑偏，高档模型想得清楚但首帧要几十秒。**
+快速反应把它拆成两个会话，用一块磁盘黑板缝起来：
+
+```
+         你（面板 / HTTP API）
+                 │
+                 ▼
+      ┌──────────────────┐   上交/下发   ┌───────────────────┐
+      │ 前台 · 低档 · 快  │ ◀──────────▶ │ 后台 · 高档 · 慢   │
+      │ 只执行、只回报    │              │ 只规划、只复核      │
+      └────────┬─────────┘              └─────────┬─────────┘
+               │       .board/ 黑板（磁盘）        │
+               └─────────►  route.md · steps/ · state.md ◄───────┘
+                 ▲
+                 │ 实时投递 / T3 闸门 / 哨兵 / 僵死看门狗（插件层）
+```
+
+- **会话随时会死，黑板永不丢**：任何状态都能从 `.board/` 重建
+- **零轮询**：挂在 DSH 的 `agent/turn-stopping` 事件上，下一步在轮末瞬间塞进当前回合
+- **破坏性操作有闸门**：`rm -rf`、部署、对外发送默认拦截，需令牌放行
+- **卡死自愈**：150s 无输出自动 cancel，没动过手还会安全重投
+
+---
+
+## 📦 安装
+
+### 方式 A：tgz（推荐，离线可用）
 
 ```bash
+# 1) 下载 Release 里的 dsh-fast-react-1.0.0.tgz
+# 2) 装进 profile
 dsh plugin --profile desktop add ./dsh-fast-react-1.0.0.tgz
-# 装完重启一次 DSH；之后打开 http://127.0.0.1:19387/fr
+# 3) 重启一次 DSH
 ```
 
-- 原理与架构：[docs/技术路线.md](./docs/技术路线.md)
-- 使用与 API：[docs/使用须知.md](./docs/使用须知.md)
+打开控制台：**侧边栏「插件」下方的「快速反应」**，或直接访问 `http://127.0.0.1:19387/fr`
 
----
-# dsh-fast-react
+### 方式 B：从源码链接（开发者）
 
-> **快速反应编排插件** —— 让 AI Agent 对突发任务"立刻开干"，而不是先想半天。
->
-> 前台低档快答快做 + 后台高档逐条规划，双会话通过**黑板文件**协作；内置独立 Web 控制台与便捷 API。
+在 profile 的 `package.json`：
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Zero Build](https://img.shields.io/badge/build-none-brightgreen.svg)](#开发)
-[![DSH](https://img.shields.io/badge/DSH-0.2.x-8a2be2.svg)](#安装)
-
----
-
-## 这是什么
-
-普通 Agent 收到任务后，会用**同一个会话**既规划又执行 —— 规划拖慢了每一次响应。
-
-`dsh-fast-react` 把它拆成两个会话：
-
-| 角色 | 职责 | 特点 |
-|---|---|---|
-| **前台** | 只执行，不规划 | 响应极短（实测 **1.4–2.6 s**），且随时可被用户打断 |
-| **后台** | 只规划，不执行 | 产出结构化步骤 + 路线，可做终局复核 |
-
-两者**不直接对话**，只通过 `.board/` 目录下的黑板文件协作：
-
-```
-用户 ──→ 前台 ──(escalate)──→ 后台
-          │                     │
-          │  ←─ 步骤文件 ────────┘
-          │
-          └─→ 执行 ─→ state.md / heartbeat.log
+```json
+{
+  "dependencies": { "dsh-fast-react": "link:C:/path/to/dsh-fast-react" },
+  "dsh": { "profile": { "bundles": ["…", "dsh-fast-react"] } }
+}
 ```
 
-**已实测收益**（DeepSeek v4.1-flash）：
+> 改 `lib/ui/*` **不用重启**：loader 每 3s 拉取并注入（首次装配需重启）。
+> 改 `lib/index.js` / `lib/api.js` 需重载插件；**任务运行中别重载**（会销毁内存会话）。
 
-| 指标 | 数值 |
+### 环境要求
+
+| 项 | 要求 |
 |---|---|
-| 前台单次响应 | **1.4 – 2.6 s** |
-| 步间衔接 | **9 ms** |
-| 首帧（上交 → 前台开工） | **10.7 s** |
-| 消防打断 | **47 ms** |
-| 上下文自动压缩 | **−92%** |
-| 天然串行任务 vs 单模型 | **快 2.5×** |
+| DeepSeek Harness | 桌面版或 `dsh web`（需要 `webserver` / `agentLoop` / `agentPresets`） |
+| Node.js | ≥ 20 |
+| 模型 | 任意可用 provider（面板内可切换，20+ 家） |
 
 ---
 
-## 特性
+## 🚀 五分钟上手
 
-- **双会话编排**：前台执行 / 后台规划，黑板解耦，互不阻塞
-- **自动分诊**：轻任务不编排（后台一句话否决），重任务才上交
-- **实时投递**：`fs.watch` 监听步骤目录，文件落盘 **~150 ms** 内投给前台
-- **结构化路线**：`fr_route` 工具用 JSON Schema 提交路线 + 步骤，格式永不走样
-- **规划闭环**：里程碑数与步骤数不一致时自动催单补齐
-- **机械哨兵**：`file-exists` / `file-absent` / `field-cmp` / `grep-match` 四类条件，命中即冻结前台 + 作废过时步骤
-- **消防通道**：用户随时打断前台（47 ms）
-- **按角色压缩**：前台 60k / 后台 60k 独立阈值，DSH 原生压缩作安全网
-- **中文 / 零依赖 / 零构建**：手写 ESM，`node --check` 即可验证
+1. 打开面板 → 右上 **启动**（前后台自动接线，首次会创建两个会话）
+2. 输入任务 → `Enter` 发送
+3. 简单任务前台自己干完；复杂任务前台上交后台，后台写出 `steps/S1.md` 后自动推进
+4. 想插话随时发：
+   - 开关**关**（默认）→ 消息排队，当前这步结束才处理
+   - 开关**开（发送即打断）**→ 先 cancel 当前生成，立刻处理你的新消息
 
----
-
-## 安装
-
-### 方式 A：作为 bundle 安装（推荐）
-
-```bash
-# 1. 把本目录放到 DSH 插件目录
-#    例：~/.dsh/dsh-fast-react
-
-# 2. 在 profile 的 package.json 里加依赖
-#    "dsh-fast-react": "link:<绝对路径>"
-
-# 3. 在 profile 的 dsh.profile.bundles 里加 "dsh-fast-react"
-
-# 4. 重启 DSH
-```
-
-### 方式 B：用 dsh-super-injector 热注入（开发时）
-
-```js
-// 在 DSH 会话里
-dev_inject_plugin({ dir: "<本目录绝对路径>" })
-```
-
-安装成功后访问 **`http://127.0.0.1:19387/fr`** 打开控制台。
-
----
-
-## Web 控制台
-
-**两个入口**：
-
-1. **侧边栏入口（推荐）** —— DSH 左侧边栏「插件 / 自动化任务」之间会多出一个 **「快速反应」**，
-   点它时**隐藏原生会话列、面板占据其位置**（所以底部不会有原生输入栏残留、四角严丝合缝、
-   不遮挡左侧栏与右下角挂件）。收起方式：
-   **点侧边栏任意一项**（会话 / 插件 / 自动化任务 —— 自动关面板并切过去，无缝）、
-   **「返回会话」按钮**、**`ESC`**。
-2. **独立页面** —— 浏览器打开 `http://127.0.0.1:19387/fr`
-
-打开面板时，入口按钮会显示**选中态**（左侧蓝条 + 淡蓝背景），与 DSH 会话项的选中语义一致 ——
-整个侧边栏是**单选**的：选它，原会话就"退选"。
-
-界面是**聊天优先**的：主区是对话气泡流（区分 你 / 前台 / 后台，限宽 1040px 居中），底部大输入框
-（`Enter` 发送、`Shift+Enter` 换行）；步骤进度、效率指标、事件流等**技术面板收在右侧抽屉**
-（点 ⚙ 展开），默认不打扰。
-
-| 区域 | 内容 |
+| 控件 | 作用 |
 |---|---|
-| **顶栏** | 状态灯 · 前台/后台阶段 · 模型名 · 启动 / 停止 / ⚙ |
-| **主区** | 对话气泡流（你 / 前台 / 后台） |
-| **底部** | 任务输入框 · 消防打断 · 发送 |
-| **技术抽屉** | 步骤进度 · 路线一致性 · 效率指标（首帧/投递/上下文/压缩）· 唤醒分布 · 计数器 · 事件流 · 重建会话 / 限额配置 |
-
-页面每秒轮询 `/fr/api/status`，断线自动恢复。
-
-> **为什么是"隐藏原生列"而不是"覆盖"**：覆盖式面板要么盖住左侧栏/右下挂件，
-> 要么漏掉底部原生输入栏（它在会话卡片外面）。隐藏原生列后，面板直接占它的父容器 `inset:0`，
-> 尺寸天然严丝合缝；关闭时恢复 `display` 即可，会话立刻回来 —— 不需要点别的会话再点回去。
-
-### 改 UI 不用重启（重要）
-
-UI 资源**外置**在 `lib/ui/` 下，路由**每次实时从磁盘读取**：
-
-| 文件 | 作用 | 改完怎么生效 |
-|---|---|---|
-| `lib/ui/page.html` | 控制台页面（全内联 CSS/JS，无外部依赖） | 重新打开面板 / 刷新页面 |
-| `lib/ui/sidebar.js` | 侧边栏入口 + 面板注入（DOM 文本锚点定位） | **保存后 ~4 秒自动生效**（loader 轮询） |
-
-插件里只保留一段**稳定不变**的 loader：它拉取 `/fr/sidebar.js` 并每 4 秒比对内容，
-变化就重新执行（`sidebar.js` 是**可重入**的 —— 自己清理上一次的按钮/面板/监听器）。
-
-⇒ **迭代 UI 完全不需要重启 DSH**。
-（这很重要：bundle 装配没有热重载，只有插件 `lib/*.js` 改动才需要重启。）
+| 启动 / 停止 | 启用/暂停整套编排（T3 拦截、实时投递、巡检）。**不销毁会话** |
+| ⊞ 会话组 | `FR-01…` 新建 / 收编当前 / 删除 / 切换 / 自愈；每组独立权限 |
+| ⚙ 技术面板 | 进度、步骤、路线检查、效率指标、唤醒分布、事件流 |
+| 模型 ▾ | 切换前后台模型 |
+| 发送即打断 | 见上 |
 
 ---
 
-## 便捷 API
+## 🧩 会话组（推荐）
 
-所有端点返回 JSON，成功 `{ ok: true, ... }`，失败 `{ ok:false, error }`。
+- 编号 `FR-01 / FR-02 …` **由服务端生成，界面不可改**（客户端传 `key` 会被忽略）
+- 每组 = 前台 `FR-0x·F` + 后台 `FR-0x·B`，全部 attach + pin 到「快速反应」工作区 ⇒ **DSH 侧边栏可直接打开原生会话页**
+- **收编当前**：把已在跑的前后台登记成组，不新建会话
+- **自愈**：编号重排、丢失会话重建、工作区重挂、权限重应用
+- **权限**：每组一个下拉（`read-only` / `workspace-write` / `danger-full-access` / `auto`），
+  立即写入沙箱模式 + 审批策略（复用 DSH `permissionPresets`）——**不用再盯着会话点“允许”**
+- 权限被拒时前台会回一行 `【上报·权限】缺 …` 并停下，不会无声重试
+
+---
+
+## 🔌 HTTP API
+
+Base：`http://127.0.0.1:19387`，`Content-Type: application/json`
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| `GET` | `/fr` | 控制台页面 |
-| `GET` | `/fr/api/status` | 全量状态（页面一次拿全）|
-| `POST` | `/fr/api/start` | 一键启动（接线 + 自动修复会话）|
-| `POST` | `/fr/api/stop` | 停止（取消正在跑的前后台）|
-| `POST` | `/fr/api/rebuild` | 重建前后台会话（用当前默认模型）|
-| `POST` | `/fr/api/task` | 提交任务 `{ text }` |
-| `POST` | `/fr/api/fire` | 消防打断 `{ reason }` |
-| `GET/POST` | `/fr/api/config` | 读 / 改配置（白名单字段，立即生效）|
-| `GET` | `/fr/api/events?since=&limit=` | 事件增量 |
-| `POST` | `/fr/api/relay` | 通用中继 `{ action, ... }`（`wake` / `steer` / `fire` / `config`）|
+| GET | `/fr` | 控制台页面 |
+| GET | `/fr/sidebar.js` | 侧边栏注入脚本（热更新通道） |
+| GET | `/fr/api/status` | 全量状态（前后台 phase、黑板、chat、模型、权限、stall） |
+| POST | `/fr/api/start` | 启用编排 + 确保接线 |
+| POST | `/fr/api/stop` | 取消前后台 + 暂停编排 |
+| POST | `/fr/api/rebuild` | 重建前后台会话 |
+| POST | `/fr/api/task` | **发任务**：`{text, interrupt?}` |
+| POST | `/fr/api/fire` | 只打断：`{reason}` |
+| GET/POST | `/fr/api/config` | 读写配置（白名单字段） |
+| GET | `/fr/api/models` | 模型清单 |
+| POST | `/fr/api/model` | 切换模型 `{provider, model}` |
+| GET/POST | `/fr/api/groups` | 会话组：`create/adopt/switch/policy/repair/delete` |
+| GET | `/fr/api/events?since=&limit=` | 事件增量 |
+| POST | `/fr/api/relay` | 运维中继 `{action, args}` |
 
-### 示例
+**示例**
 
 ```bash
-# 开跑
-curl -X POST http://127.0.0.1:19387/fr/api/start
+# 发任务（排队）
+curl -X POST localhost:19387/fr/api/task -H 'content-type: application/json' \
+  -d '{"text":"把 README 的示例命令跑一遍并汇报"}'
 
-# 交任务
-curl -X POST http://127.0.0.1:19387/fr/api/task \
-  -H 'content-type: application/json' \
-  -d '{"text":"把 src 下所有 .ts 补上类型标注并逐个 tsc 校验"}'
+# 发任务（先打断再投递）
+curl -X POST localhost:19387/fr/api/task -H 'content-type: application/json' \
+  -d '{"text":"停一下，只回三个字：已打断","interrupt":true}'
 
-# 看状态
-curl http://127.0.0.1:19387/fr/api/status | jq '.front,.firstFrameMs,.steps'
+# 新建并切换会话组
+curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' -d '{"action":"create","title":"桌面整理"}'
+curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' -d '{"action":"switch","key":"FR-01"}'
 
-# 紧急打断
-curl -X POST http://127.0.0.1:19387/fr/api/fire \
-  -H 'content-type: application/json' -d '{"reason":"方向错了，停"}'
+# 给该组完全权限（不再弹审批）
+curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' \
+  -d '{"action":"policy","key":"FR-01","preset":"danger-full-access"}'
 ```
 
 ---
 
-## 配置
+## 🗂 黑板与文件
 
-黑板目录下的 `config.json`（不存在则用默认值）：
-
-| 字段 | 默认 | 说明 |
-|---|---|---|
-| `boardRoot` | `~/Desktop/FastReact` | 黑板根目录 |
-| `frontPreset` / `backPreset` | `fast-react-front/-back` | 会话预设名 |
-| `frontSessionId` / `backSessionId` | 自动发现 | 钉住的会话 id |
-| `enabled` | `true` | 总开关 |
-| `batchSteps` | `3` | 一次投递几条步骤 |
-| `pullSteps` | `true` | 前台自己读下一步（拉模式）|
-| `contextGuard` | `true` | 按角色上下文压缩开关 |
-| `frontContextLimit` | `60000` | 前台压缩阈值 |
-| `backContextLimit` | `60000` | 后台压缩阈值（**别设太大**，见下方"坑"）|
-| `lookahead` | `1` | 前方至少备几条步骤才不催单 |
-| `autoHeal` | `true` | 重启后自动重建前后台 |
-| `interruptCooldownMs` | `60000` | 消防打断冷却 |
-| `interruptMaxPerTask` | `5` | 单任务最多打断次数 |
-| `firstFrameTimeoutMs` | `180000` | 首帧超时兜底 |
-| `sentinelIntervalMs` | `30000` | 机械哨兵轮询间隔 |
-
-配置修改后可通过 `POST /fr/api/config` 或 `fr_poke {action:"config"}` 立即生效。
-
----
-
-## 工具（给 Agent 用）
-
-| 工具 | 谁用 | 作用 |
-|---|---|---|
-| `fr_escalate` | 前台 | 上交任务给后台（自动内联交接包）|
-| `fr_route` | 后台 | **结构化提交路线 + 步骤**（JSON Schema 校验）|
-| `fr_poke` | 人类/运维 | 手动 `wake` / `steer` / `resolve` / `pin` / `cancel` / `config` / `route` / `fire` |
-| `fr_status` | 只读自检 | 返回前后台接线、板面、计数、最近事件 |
-
-`fr_route` 的 schema 保证了格式永不走样：
-
-```js
-fr_route({
-  goal: "一句话目标",
-  acceptance: ["可机器判定的判据1", "判据2"],
-  milestones: [{ id: "M1", desc: "补 docstring", step: "S1" }],
-  steps: [
-    { id: "S1", action: "给 m1.py 加 docstring", accept: "py_compile 通过", assumes: "无" },
-    { id: "S2", action: "给 m2.py 加 docstring", accept: "py_compile 通过", assumes: "S1 完成", group: "P1" }
-  ],
-  sentinels: [{ id: "C1", kind: "file-exists", target: "C:\\work\\REPORT.md" }]
-})
+```
+<工作目录>/.board/
+├── config.json      # 运行配置
+├── groups.json      # 会话组（FR-0x → sessionId + preset）
+├── state.md         # planVersion / status / done
+├── route.md         # 后台路线（含「## 里程碑」「## 哨兵条件」）
+├── steps/S1.md…     # 步骤（前台自取）
+├── handoff.md       # 前台上交
+├── confirm/         # T3 放行令牌 S<k>.ok
+├── heartbeat.log    # 工具执行流水
+└── events.jsonl     # 全部事件（排障第一现场）
 ```
 
 ---
 
-## 目录结构
+## 🛠 排障
+
+| 症状 | 先看 | 处理 |
+|---|---|---|
+| 面板没反应 | `status.front` 是否 null | 点「启动」 |
+| 发了消息没动作 | `phase` / `config.enabled` | 开「发送即打断」重发 |
+| 长时间空白 | `stall` + `heartbeat.log` 末行 | 看门狗会 cancel；仍不动就「停止」再「启动」 |
+| 卡在确认 | `.board/confirm/` + 琥珀色通知 | 写 `<step>.ok` 放行 |
+| 权限被拒 | 权限 chip / 组权限下拉 | 改 `danger-full-access` |
+| 侧边栏没会话 | 会话组状态点 `missing` | 点「自愈」 |
+| 改 UI 不生效 | Console 有无 `/fr/sidebar.js` 请求 | 重启一次 DSH |
+
+---
+
+## ❓ FAQ
+
+**为什么首帧要 30–60 秒？**
+后台是高档次模型，在写 route + steps；前台本身仍是秒级响应。面板会显示「正在处理…」。
+
+**热重载会怎样？**
+插件创建的会话是内存态，重载=销毁（排队消息一起没）。所以任务运行中不要重载。
+
+**面板会盖住右下角挂件吗？**
+会。面板按原生会话区矩形整体覆盖，这是当前的取舍（可加排除区域，未做）。
+
+**能和 Hindsight 记忆插件一起用吗？**
+可以，互不依赖。若记忆不自动存，检查 `~/.hindsight/coding-agent.json` 的 `retainSessions: true`；
+换抽取模型改 `~/.hindsight/profiles/coding-agent.env`。
+
+---
+
+## 🧭 目录结构
 
 ```
 dsh-fast-react/
+├── package.json          # dsh 插件元信息（bundle.patch / console=/fr）
+├── cordis.patch.yml      # profile 装配层
 ├── lib/
-│   ├── index.js        # 主插件（核心逻辑：双会话编排、哨兵、压缩、工具）
-│   ├── api.js          # HTTP API（12 个端点 + 页面/脚本路由）
+│   ├── index.js          # 装配 / 事件 / 简报 / 哨兵 / 看门狗 / 会话组
+│   ├── api.js            # HTTP 路由（/fr, /fr/api/*）
 │   └── ui/
-│       ├── page.html   # 控制台页面（全内联 CSS/JS，实时读取）
-│       └── sidebar.js  # 侧边栏入口 + 严丝合缝面板注入（实时读取）
-├── cordis.patch.yml    # DSH bundle patch
-├── package.json
-├── README.md
-└── LICENSE
+│       ├── page.html     # 控制台（对话/技术面板/会话组/模型/权限）
+│       └── sidebar.js    # 侧边栏注入与浮层（几何跟随、灰线对齐）
+├── docs/
+│   ├── 技术路线.md        # 架构原理 + 踩坑表
+│   └── 使用须知.md        # 安装/上手/API/排障（详细版）
+└── README.md
 ```
 
-**零构建**：`lib/*.js` 就是源码，手写 ESM，直接 `import()` 即可，无需 `npm install`。
-**UI 零重启迭代**：`lib/ui/*` 由路由实时读取，改完重新打开面板即生效。
-
 ---
 
-## 已知的坑（踩过的）
+## 📄 License
 
-| # | 坑 | 结论 |
-|---|---|---|
-| 1 | **后台上下文设太大**（如 600k）⇒ 永不压缩，累积到 132k 后首帧从 8s 涨到 23s | 后台保持 **≤60k** |
-| 2 | `cancel()` 后立即 `steer/followup` 会抛 `unreachable variant` | cancel 后延迟 ~1s 再唤醒 |
-| 3 | `writeAtomic` 先写临时文件 ⇒ `fs.watch` 每次触发两次 | watcher 过滤 `^S\d+\.md$` |
-| 4 | 后台会"过度调研"（50 个工具调用才产出 2 步） | 简报里写死「只做 1 件事 + 禁止 pwsh」|
-| 5 | 提示词约束对**输出格式**不可靠 | 改用 `fr_route` 工具 + JSON Schema |
-| 6 | `record.planVersion` 和步骤数比大小会误报 | 已删（机械哨兵别猜语义）|
-| 7 | 热重载时旧实例不 dispose ⇒ 双实例叠加 | 模块级代际守卫 `ACTIVE_GEN` |
-| 8 | 简报里 `{{BOARD}}\.board\` 而 `{{BOARD}}` 已含 `.board` ⇒ 拼成 `.board\.board`，前台连读失败卡死 | 模板只写 `{{BOARD}}\` |
-| 9 | `saveOverrides()` 纯写内存对象会抹掉后来才加的键（`provider`/`model` 就这么丢的） | 改为**读盘 + 合并**再写 |
-| 10 | 重建会话读"全局默认模型"可能拿到不适合的模型 | 配置 `provider`/`model` 优先，全局默认兜底 |
-| 11 | 全窗口 `position:fixed` 面板会盖住侧边栏和右下挂件 | 面板改为插入**会话容器**内 `position:absolute; inset:0; border-radius:inherit` |
-| 12 | bundle 装配后**插件没有热重载** | UI 资源外置到 `lib/ui/` 由路由实时读取，改 UI 不用重启 |
-
----
-
-## 开发
-
-```bash
-# 语法检查（无需安装依赖）
-node -e "import('file:///ABS/PATH/lib/index.js').then(()=>console.log('OK'))"
-
-# 改了 lib/*.js 后让插件重载（注入器环境）
-dev_reload_package { packageName: "dsh-fast-react" }
-```
-
-**所有代码零依赖、零构建**，不需要 `npm install`。
-
----
-
-## 设计原则
-
-1. **一切以效率为准** —— 每加一个机制先算：省的时间 > 花的时间吗？
-2. **前台绝不空等** —— 要么在执行，要么在做前置侦察；上交≠停工
-3. **黑板是唯一真相** —— 前后台不直接对话，只读写信箱/状态/步骤文件
-4. **格式靠代码不靠自觉** —— LLM 会不遵守提示词，但不会违反 JSON Schema
-5. **打断只给极少数场景** —— 每次打断都浪费一次生成
-
----
-
-## License
-
-[MIT](LICENSE)
-
+MIT © 2026 — 见 [LICENSE](./LICENSE)
