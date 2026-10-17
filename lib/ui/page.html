@@ -36,12 +36,17 @@
   #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
   /* 极简顶栏：无底色填充，只保留底部一条对齐的分割线 */
-  header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:transparent;border-bottom:1px solid var(--line);flex:0 0 auto}
+  /* 顶栏 = DSH 页签行同款（实测：26px 高、灰线 1px rgba(255,255,255,.16)、
+     左起点 x=284 = padding 20；chrome bar 占上方 50px 对应 DSH titleRow） */
+  header{display:flex;align-items:center;gap:10px;height:26px;box-sizing:border-box;padding:0 20px;background:transparent;border-bottom:1px solid rgba(255,255,255,.16);flex:0 0 auto;overflow:hidden;white-space:nowrap}
+  header .chips{display:flex;gap:6px;flex:0 0 auto}
+  header .chip{padding:1px 8px;font-size:11px;border-radius:999px}
+  header button{padding:2px 10px;font-size:12px;border-radius:6px}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
   .dot.on{background:var(--ok);box-shadow:0 0 7px var(--ok)}
   .dot.busy{background:var(--warn);box-shadow:0 0 7px var(--warn);animation:pulse 1.2s infinite}
   @keyframes pulse{50%{opacity:.35}}
-  .title{font-weight:600;font-size:14.5px;letter-spacing:.2px}
+  .title{font-weight:500;font-size:13px;letter-spacing:.2px;color:var(--fg2);display:none} /* 标题在 chrome bar，避免重复 */
   .chips{display:flex;gap:7px;flex-wrap:wrap}
   .chip{padding:2px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:11.5px;color:var(--fg2);white-space:nowrap}
   .chip b{color:var(--fg);font-weight:600}
