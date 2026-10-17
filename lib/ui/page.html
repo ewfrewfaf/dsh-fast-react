@@ -101,6 +101,16 @@
   .msg .bubble{position:relative}
   .msg:hover .copy{opacity:1;pointer-events:auto}
   .copy:hover{color:var(--fg);border-color:rgba(255,255,255,.28)}
+  /* 发送即打断开关（胶囊式 toggle） */
+  .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:4px 10px 4px 4px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:transparent;transition:.15s}
+  .switch:hover{background:rgba(255,255,255,.06)}
+  .switch input{display:none}
+  .switch .slider{position:relative;width:30px;height:17px;border-radius:999px;background:rgba(255,255,255,.16);transition:.15s;flex:0 0 auto}
+  .switch .slider::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#d8dde3;transition:.15s}
+  .switch .sw-lbl{font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .switch input:checked + .slider{background:#c2453d}
+  .switch input:checked + .slider::after{transform:translateX(13px);background:#fff}
+  .switch input:checked ~ .sw-lbl{color:#e88b84}
 
   footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
   /* DSH 同款输入栏（实测：bg rgb(44,44,46) 浅灰 / 圆角 28 / 无边框 / 无投影） */
@@ -226,7 +236,12 @@
         <textarea id="input" placeholder="发消息或创建任务..."></textarea>
         <div class="bar">
           <span class="hint" id="hint">就绪</span>
-          <button id="btnFire" class="pill" title="紧急打断前台">消防打断</button>
+          <!-- 发送即打断开关：开 = 回车先打断再立即投递；关 = 排队（默认） -->
+          <label class="switch" id="fireSwitch" title="打开后：回车发送会先打断前台当前生成，再立刻投递新消息；关闭则排队到下一步">
+            <input type="checkbox" id="fireMode" />
+            <span class="slider"></span>
+            <span class="sw-lbl">发送即打断</span>
+          </label>
           <span class="grow"></span>
           <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
           <button id="send" class="send" title="发送 (Enter)">↑</button>
@@ -470,11 +485,12 @@
   function sendTask(){
     var v = $('input').value.trim()
     if (!v) return
+    var interrupt = !!$('fireMode').checked
     $('input').value = ''
     try { localStorage.removeItem(DRAFT_KEY) } catch (err) {}
     sentHistory.push(v)
     if (sentHistory.length > 30) sentHistory.shift()
-    post('/task', { text: v }, '已发送')
+    post('/task', { text: v, interrupt: interrupt }, interrupt ? '已打断并发送' : '已排队')
   }
   $('send').onclick = sendTask
   $('input').addEventListener('keydown', function(e){
@@ -487,6 +503,16 @@
       }
     }
   })
+  // ── 发送即打断开关（持久化）─────────────────────────────────────────
+  var FIRE_KEY = 'fr-fire-mode'
+  function loadFireMode () {
+    try { $('fireMode').checked = localStorage.getItem(FIRE_KEY) === '1' } catch (err) {}
+  }
+  $('fireMode').addEventListener('change', function(){
+    try { localStorage.setItem(FIRE_KEY, $('fireMode').checked ? '1' : '0') } catch (err) {}
+    toast($('fireMode').checked ? '发送即打断：开（回车会先打断）' : '发送即打断：关（回车排队到下一步）')
+  })
+  loadFireMode()
   // ── 便捷功能：草稿保存 / Ctrl+K 聚焦 / 快捷模板 / 一键复制 ──────────────
   var DRAFT_KEY = 'fr-draft'
   var sentHistory = []
@@ -538,7 +564,6 @@
   restoreDraft()
   $('btnStart').onclick = function(){ post('/start', {}, '已启动') }
   $('btnStop').onclick = function(){ if(confirm('停止快速反应（取消正在跑的前后台）？')) post('/stop', {}, '已停止') }
-  $('btnFire').onclick = function(){ post('/fire', { reason: '用户手动打断' }, '已打断前台') }
   $('btnRebuild').onclick = function(){ post('/rebuild', {}, '已重建会话') }
   $('btnCfg').onclick = function(){
     post('/config', { frontContextLimit: Number($('cFront').value), backContextLimit: Number($('cBack').value) }, '限额已保存')
