@@ -120,8 +120,10 @@ Base：`http://127.0.0.1:19387`，`Content-Type: application/json`
 | POST | `/fr/api/start` | 启用编排 + 确保接线 |
 | POST | `/fr/api/stop` | 取消前后台 + 暂停编排 |
 | POST | `/fr/api/rebuild` | 重建前后台会话 |
-| POST | `/fr/api/task` | **发任务**：`{text, interrupt?}` |
-| POST | `/fr/api/fire` | 只打断：`{reason}` |
+| POST | `/fr/api/task` | **发任务**：`{text, interrupt?, sessionId?, group?, role?}` |
+| GET | `/fr/api/sessions` | 所有活会话（id/role/phase/group/preset/wired） |
+| GET | `/fr/api/session?id=&group=&role=` | 单个会话信息（会话级寻址） |
+| POST | `/fr/api/fire` | 只打断：`{reason, sessionId?, group?, role?}` |
 | GET/POST | `/fr/api/config` | 读写配置（白名单字段） |
 | GET | `/fr/api/models` | 模型清单 |
 | POST | `/fr/api/model` | 切换模型 `{provider, model}` |
