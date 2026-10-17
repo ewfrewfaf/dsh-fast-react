@@ -6,9 +6,28 @@
 <title>快速反应</title>
 <style>
   :root{
-    --bg:#0d1117; --bg2:#161b22; --bg3:#1c2128; --line:#30363d;
-    --fg:#e6edf3; --fg2:#8b949e; --muted:#6e7681;
-    --accent:#58a6ff; --ok:#3fb950; --warn:#d29922; --err:#f85149;
+    /* ══ DSH 官方主题 token（--dsw-alias-*）：同源 iframe 内由底部脚本从父页面
+       实时同步真实值；独立打开（无父页）时用下面的 fallback，色值与 DSH 暗色一致 ══ */
+    --dsw-alias-bg-base:#0d1117;
+    --dsw-alias-bg-layer-1:#161b22;
+    --dsw-alias-bg-layer-2:#1c2128;
+    --dsw-alias-bg-overlay:#1c2128;
+    --dsw-alias-border-l1:#30363d;
+    --dsw-alias-border-l2:#3d444d;
+    --dsw-alias-brand-primary:#1f6feb;
+    --dsw-alias-label-primary:#e6edf3;
+    --dsw-alias-label-secondary:#8b949e;
+    --dsw-alias-state-success-primary:#3fb950;
+    --dsw-alias-state-warn-primary:#d29922;
+    --dsw-alias-state-error-primary:#f85149;
+    --dsw-alias-state-idle-primary:#6e7681;
+
+    /* 语义别名：全站颜色都走这两个来源（同步后的 dsw 值优先） */
+    --bg:var(--dsw-alias-bg-base); --bg2:var(--dsw-alias-bg-layer-1); --bg3:var(--dsw-alias-bg-layer-2);
+    --line:var(--dsw-alias-border-l1); --line2:var(--dsw-alias-border-l2);
+    --fg:var(--dsw-alias-label-primary); --fg2:var(--dsw-alias-label-secondary); --muted:var(--dsw-alias-state-idle-primary);
+    --accent:var(--dsw-alias-brand-primary);
+    --ok:var(--dsw-alias-state-success-primary); --warn:var(--dsw-alias-state-warn-primary); --err:var(--dsw-alias-state-error-primary);
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
@@ -16,28 +35,29 @@
   body{background:var(--bg);color:var(--fg);font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
   #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
-  header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--line);flex:0 0 auto}
+  /* 极简顶栏：无底色填充，只保留底部一条对齐的分割线 */
+  header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:transparent;border-bottom:1px solid var(--line);flex:0 0 auto}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
   .dot.on{background:var(--ok);box-shadow:0 0 7px var(--ok)}
   .dot.busy{background:var(--warn);box-shadow:0 0 7px var(--warn);animation:pulse 1.2s infinite}
   @keyframes pulse{50%{opacity:.35}}
   .title{font-weight:600;font-size:14.5px;letter-spacing:.2px}
   .chips{display:flex;gap:7px;flex-wrap:wrap}
-  .chip{padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--bg3);font-size:11.5px;color:var(--fg2);white-space:nowrap}
+  .chip{padding:2px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:11.5px;color:var(--fg2);white-space:nowrap}
   .chip b{color:var(--fg);font-weight:600}
   .grow{flex:1}
-  button{cursor:pointer;border:1px solid var(--line);background:var(--bg3);color:var(--fg);padding:6px 12px;border-radius:7px;font-size:12.5px;font-family:inherit;transition:.14s}
-  button:hover:not(:disabled){border-color:#4b5563;background:#242a33}
+  button{cursor:pointer;border:1px solid var(--line);background:var(--bg3);color:var(--fg);padding:6px 12px;border-radius:8px;font-size:12.5px;font-family:inherit;transition:.14s}
+  button:hover:not(:disabled){border-color:var(--line2);background:var(--bg-overlay,var(--bg3))}
   button:disabled{opacity:.45;cursor:not-allowed}
-  button.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
-  button.primary:hover:not(:disabled){background:#2f81f7}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover:not(:disabled){filter:brightness(1.12)}
   button.ghost{background:transparent}
   button.icon{padding:6px 9px;font-size:14px;line-height:1}
 
   main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative}
   #chat{flex:1 1 auto;overflow:auto;padding:20px 22px 8px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:1040px;margin:0 auto}
   #chat::-webkit-scrollbar{width:10px}
-  #chat::-webkit-scrollbar-thumb{background:#2d333b;border-radius:6px}
+  #chat::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
   .empty{margin:auto;text-align:center;color:var(--muted);max-width:480px;line-height:2}
   .empty b{color:var(--fg2);display:block;margin-bottom:10px;font-size:16px}
   .empty code{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px var(--mono);color:#d2a8ff}
@@ -45,28 +65,28 @@
   .msg{display:flex;gap:10px;max-width:min(88%,900px)}
   .msg.me{align-self:flex-end;flex-direction:row-reverse}
   .avatar{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:var(--bg3);border:1px solid var(--line)}
-  .msg.me .avatar{background:#1f6feb;border-color:#1f6feb;color:#fff}
-  .msg.back .avatar{background:#6e40c9;border-color:#6e40c9;color:#fff}
+  .msg.me .avatar{background:var(--accent);border-color:var(--accent);color:#fff}
+  .msg.back .avatar{background:var(--bg-overlay,var(--bg3));border-color:var(--line2);color:var(--fg2)}
   .bubble{display:flex;flex-direction:column;gap:4px;min-width:0}
   .bubble .who{font-size:10.5px;letter-spacing:.5px;color:var(--muted)}
   .bubble .txt{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:9px 13px;white-space:pre-wrap;word-break:break-word;font-size:13.5px;line-height:1.65}
-  .msg.me .bubble .txt{background:rgba(31,111,235,.14);border-color:rgba(31,111,235,.45)}
-  .msg.back .bubble .txt{border-color:rgba(110,64,201,.45)}
+  .msg.me .bubble .txt{background:color-mix(in srgb, var(--accent) 14%, transparent);border-color:color-mix(in srgb, var(--accent) 45%, transparent)}
+  .msg.back .bubble .txt{border-color:var(--line2)}
 
   footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
   /* DSH 同款输入框：大圆角、深底、胶囊按钮、圆形蓝色发送键 */
-  .composer{display:flex;flex-direction:column;gap:9px;background:#161b22;border:1px solid #30363d;border-radius:24px;padding:16px 16px 11px;transition:.15s;width:100%;max-width:1040px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.25)}
-  .composer:focus-within{border-color:#3d444d;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+  .composer{display:flex;flex-direction:column;gap:9px;background:var(--bg2);border:1px solid var(--line);border-radius:24px;padding:16px 16px 11px;transition:.15s;width:100%;max-width:1040px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.25)}
+  .composer:focus-within{border-color:var(--line2)}
   .composer textarea{width:100%;min-height:52px;max-height:210px;resize:none;background:transparent;color:var(--fg);border:0;outline:none;font:14.5px/1.6 inherit;padding:2px 4px}
-  .composer textarea::placeholder{color:#6e7681}
+  .composer textarea::placeholder{color:var(--muted)}
   .composer .bar{display:flex;align-items:center;gap:8px}
-  .composer .bar .hint{font-size:11.5px;color:var(--muted);background:#21262d;border:1px solid #30363d;border-radius:999px;padding:5px 12px;white-space:nowrap}
-  /* 胶囊按钮（DSH 左下权限胶囊同款） */
-  .composer .pill{background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:999px;padding:7px 15px;font-size:12.5px}
-  .composer .pill:hover{background:#262c36;border-color:#444c56}
-  .send{width:38px;height:38px;border-radius:50%;background:#1f6feb;border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s;box-shadow:0 2px 8px rgba(31,111,235,.35)}
-  .send:hover{background:#388bfd}
-  .send:disabled{opacity:.45;cursor:default;box-shadow:none}
+  .composer .bar .hint{font-size:11.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  /* 胶囊按钮（DSH 权限胶囊同款：透明底 + 细描边） */
+  .composer .pill{background:transparent;border:1px solid var(--line);color:var(--fg2);border-radius:999px;padding:7px 15px;font-size:12.5px}
+  .composer .pill:hover{background:var(--bg3);color:var(--fg);border-color:var(--line2)}
+  .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s}
+  .send:hover:not(:disabled){filter:brightness(1.12)}
+  .send:disabled{opacity:.45;cursor:default}
   .send:disabled{opacity:.4;cursor:not-allowed}
   .send:hover:not(:disabled){background:#2f81f7}
 
@@ -102,6 +122,33 @@
   body.embed #chat{padding:16px 18px 6px}
   body.embed footer{padding:8px 14px 12px}
 </style>
+<script>
+/* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
+   这样本页所有 var(--dsw-alias-*) 都变成 DSH 的实时真实色值；
+   无父页（浏览器独立打开）时保持 :root 里的 fallback。每 3s 兜底重同步 + focus 时同步。 */
+(function(){
+  var NAMES=['--dsw-alias-bg-base','--dsw-alias-bg-layer-1','--dsw-alias-bg-layer-2','--dsw-alias-bg-overlay',
+    '--dsw-alias-border-l1','--dsw-alias-border-l2','--dsw-alias-brand-primary',
+    '--dsw-alias-label-primary','--dsw-alias-label-secondary',
+    '--dsw-alias-state-success-primary','--dsw-alias-state-warn-primary',
+    '--dsw-alias-state-error-primary','--dsw-alias-state-idle-primary','--dsw-specific-sidebar-fill'];
+  function sync(){
+    try{
+      if(!window.parent||window.parent===window)return;
+      var ps=window.parent.getComputedStyle(window.parent.document.documentElement);
+      var changed=false;
+      NAMES.forEach(function(n){
+        var v=ps.getPropertyValue(n);
+        if(v){v=v.trim();if(v){document.documentElement.style.setProperty(n,v);changed=true}}
+      });
+      return changed;
+    }catch(e){return false}
+  }
+  sync();
+  setInterval(sync,3000);
+  window.addEventListener('focus',sync);
+})();
+</script>
 </head>
 <body>
 <div id="app">
