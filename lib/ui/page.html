@@ -84,6 +84,13 @@
   .think[open] summary::before{transform:rotate(90deg)}
   .think summary:hover{color:var(--fg2);background:rgba(255,255,255,.075)}
   .think .tt{margin-top:7px;padding:9px 13px;background:rgba(255,255,255,.035);border-left:2px solid rgba(255,255,255,.12);border-radius:0 10px 10px 0;color:var(--muted);font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto}
+  /* 运行指示：前台在跑时必须有反馈，否则看起来像死了 */
+  .msg.typing{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;padding:2px 4px}
+  .dots{display:inline-flex;gap:3px}
+  .dots i{width:5px;height:5px;border-radius:50%;background:var(--fg2);display:block;animation:blink 1.2s infinite}
+  .dots i:nth-child(2){animation-delay:.2s}
+  .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.22;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
 
   footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
   /* DSH 同款输入栏（实测：bg rgb(44,44,46) 浅灰 / 圆角 28 / 无边框 / 无投影） */
@@ -296,21 +303,24 @@
     })
     ;(chat.back || []).forEach(function(m){ rows.push({ m:m, cls: '' }) })
     rows.sort(function(a,b){ return String(a.m.at).localeCompare(String(b.m.at)) })
+    var running = !!(d.front && d.front.phase === 'running')
     var tail = rows.length ? rows[rows.length-1].m : null
-    var key = rows.length + '|' + (tail ? String(tail.at) + String(tail.text).slice(0,40) + '|' + String(tail.think || '').length : '')
+    var key = rows.length + '|' + (tail ? String(tail.at) + String(tail.text).slice(0,40) + '|' + String(tail.think || '').length : '') + '|' + (running ? 'R' : '')
     if (key === lastChatKey) return
     lastChatKey = key
     var box = $('chat')
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
+    var typing = running ? '<div class="msg typing"><span class="dots"><i></i><i></i><i></i></span>前台正在处理…</div>' : ''
     if (!rows.length){
-      box.innerHTML = '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。</div>'
+      box.innerHTML = typing || '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。</div>'
+      if (atBottom) box.scrollTop = box.scrollHeight
       return
     }
     box.innerHTML = rows.map(function(r){
       // 思考过程：浅灰折叠块（仅 Agent 回复，默认收起）
       var think = (r.m.role === 'agent' && r.m.think) ? '<details class="think"><summary>思考过程</summary><div class="tt">'+esc(r.m.think)+'</div></details>' : ''
       return '<div class="msg '+r.cls+'"><div class="bubble">'+think+'<div class="txt">'+esc(r.m.text)+'</div></div></div>'
-    }).join('')
+    }).join('') + typing
     if (atBottom) box.scrollTop = box.scrollHeight
   }
 
