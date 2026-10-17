@@ -1,10 +1,10 @@
-<div align="center">
+﻿<div align="center">
 
 # ⚡ 快速反应 · dsh-fast-react
 
 **前台低档快答快做，后台高档逐步规划 —— 让两个会话像一条流水线那样干活**
 
-[![Web Coding](https://img.shields.io/badge/项目类型-Web%20Coding-2f81f7?style=for-the-badge)](#-web-coding-项目说明)
+[![AI Project](https://img.shields.io/badge/项目类型-AI%20Project-8957e5?style=for-the-badge)](#-ai-project-项目说明)
 [![version](https://img.shields.io/badge/version-1.0.2-blue)](./package.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![platform](https://img.shields.io/badge/DeepSeek%20Harness-%E2%89%A5%200.2-6f42c1)](#-安装)
@@ -15,9 +15,9 @@
 
 ---
 
-> ## 🖥️ Web Coding 项目说明
+> ## 🤖 AI Project 项目说明
 >
-> **本项目是一个 Web Coding 项目** —— 它运行在 **DeepSeek Harness（DSH）的 Web GUI** 里，
+> **本项目是一个 AI Project（AI 项目）** —— 它运行在 **DeepSeek Harness（DSH）的 Web GUI** 里，
 > 形态是「插件 + 浏览器控制台」，**不是独立的桌面应用，也不是可单独打开的网页**。
 >
 > | 要点 | 说明 |
@@ -243,6 +243,7 @@ dsh-fast-react/
 ## 📄 License
 
 MIT © 2026 — 见 [LICENSE](./LICENSE)
+
 
 
 
