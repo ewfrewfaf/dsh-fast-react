@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "dsh-fast-react",
   "version": "1.0.2",
   "description": "快速反应：前台低档快答快做 + 后台高档逐步规划的双会话编排插件，含独立 Web 控制台与便捷 API",
@@ -45,7 +45,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-name/dsh-fast-react"
+    "url": "https://github.com/Ewfrewfaf/dsh-fast-react"
   },
-  "homepage": "https://github.com/your-name/dsh-fast-react#readme"
+  "homepage": "https://github.com/Ewfrewfaf/dsh-fast-react#readme"
 }
+
