@@ -363,6 +363,9 @@
   // 系统注入话术（防御性兜底：服务端已过滤一遍）
   var SYS_RE = /^(【快速反应|<system-reminder|Current runtime context|Time sampled while|本环境装有|You are an AI agent|This is an automatically generated)/
 
+  // 后台内部话术（分诊/判定/verdict）不该出现在用户视野
+  var BACK_INTERNAL_RE = /^(判定：|判定:|已写\s*verdict|已更新\s*verdict|无需调整|short:\s*)/
+
   function renderChat(d){
     var chat = d.chat || {}
     var rows = []
@@ -371,10 +374,17 @@
       if (m.role === 'notice') { rows.push({ m:m, cls:'notice' }); return }
       if (m.role !== 'user' && m.role !== 'agent') return
       if (m.role === 'user' && (SYS_RE.test(String(m.text||'')) || /<system-reminder>/.test(String(m.text||'')))) return
+      // 后台分诊话术可能被投进前台，同样隐藏（用户实测：不该看到"判定：无需调整，已写 verdict.md"）
+      if (m.role === 'agent' && BACK_INTERNAL_RE.test(String(m.text||''))) return
       rows.push({ m:m, cls: m.role === 'user' ? 'me' : '' })
     })
-    ;(chat.back || []).forEach(function(m){ rows.push({ m:m, cls: '' }) })
-    rows.sort(function(a,b){ return String(a.m.at).localeCompare(String(b.m.at)) })
+    // ★ 不再渲染 chat.back：后台是内部角色，它的「判定/verdict」不是用户消息；
+    //   之前混进来还会因为没有 at 时间戳被排到最底部（用户实测顺序错乱）。
+    rows.sort(function(a,b){
+      var ta = Date.parse(String(a.m.at || '')), tb = Date.parse(String(b.m.at || ''))
+      if (!isNaN(ta) && !isNaN(tb) && ta !== tb) return ta - tb
+      return 0   // 时间不可比时保持原有顺序（稳定排序）
+    })
     var running = !!(d.front && d.front.phase === 'running')
     var tail = rows.length ? rows[rows.length-1].m : null
     var key = rows.length + '|' + (tail ? String(tail.at) + String(tail.text).slice(0,40) + '|' + String(tail.think || '').length : '') + '|' + (running ? 'R' : '')
