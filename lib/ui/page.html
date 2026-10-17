@@ -76,6 +76,14 @@
   .bubble .txt{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;color:var(--fg)}
   .msg.me .bubble .txt{background:rgb(44,44,46);border-radius:18px;padding:10px 16px}
   .msg:not(.me) .bubble .txt{background:transparent;padding:0 2px}
+  /* 思考过程：浅灰折叠块（默认收起，点开看推理） */
+  .think{margin:0 0 8px}
+  .think summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:999px;padding:4px 12px;user-select:none}
+  .think summary::-webkit-details-marker{display:none}
+  .think summary::before{content:'▸';font-size:10px;opacity:.8;transition:transform .15s}
+  .think[open] summary::before{transform:rotate(90deg)}
+  .think summary:hover{color:var(--fg2);background:rgba(255,255,255,.075)}
+  .think .tt{margin-top:7px;padding:9px 13px;background:rgba(255,255,255,.035);border-left:2px solid rgba(255,255,255,.12);border-radius:0 10px 10px 0;color:var(--muted);font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto}
 
   footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
   /* DSH 同款输入栏（实测：bg rgb(44,44,46) 浅灰 / 圆角 28 / 无边框 / 无投影） */
@@ -288,7 +296,8 @@
     })
     ;(chat.back || []).forEach(function(m){ rows.push({ m:m, cls: '' }) })
     rows.sort(function(a,b){ return String(a.m.at).localeCompare(String(b.m.at)) })
-    var key = rows.length + '|' + (rows.length ? String(rows[rows.length-1].m.at) + String(rows[rows.length-1].m.text).slice(0,40) : '')
+    var tail = rows.length ? rows[rows.length-1].m : null
+    var key = rows.length + '|' + (tail ? String(tail.at) + String(tail.text).slice(0,40) + '|' + String(tail.think || '').length : '')
     if (key === lastChatKey) return
     lastChatKey = key
     var box = $('chat')
@@ -298,7 +307,9 @@
       return
     }
     box.innerHTML = rows.map(function(r){
-      return '<div class="msg '+r.cls+'"><div class="bubble"><div class="txt">'+esc(r.m.text)+'</div></div></div>'
+      // 思考过程：浅灰折叠块（仅 Agent 回复，默认收起）
+      var think = (r.m.role === 'agent' && r.m.think) ? '<details class="think"><summary>思考过程</summary><div class="tt">'+esc(r.m.think)+'</div></details>' : ''
+      return '<div class="msg '+r.cls+'"><div class="bubble">'+think+'<div class="txt">'+esc(r.m.text)+'</div></div></div>'
     }).join('')
     if (atBottom) box.scrollTop = box.scrollHeight
   }
