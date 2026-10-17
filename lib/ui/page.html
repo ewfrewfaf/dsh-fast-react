@@ -93,6 +93,14 @@
   @keyframes blink{0%,60%,100%{opacity:.22;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
   /* 可操作通知（T3 确认 / 哨兵 / 上交）：必须显眼，否则用户看不到卡点 */
   .notice{align-self:center;max-width:86%;font-size:12.5px;line-height:1.65;color:#e3c07b;background:rgba(227,192,123,.07);border:1px solid rgba(227,192,123,.28);border-radius:10px;padding:7px 13px;white-space:pre-wrap;word-break:break-word}
+  /* 便捷功能：快捷模板 / 悬停复制 */
+  .tmpls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+  .tmpl{cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--fg2);border-radius:999px;padding:6px 13px;font-size:12.5px;font-family:inherit;transition:.14s}
+  .tmpl:hover{background:rgba(255,255,255,.1);color:var(--fg);border-color:rgba(255,255,255,.2)}
+  .copy{position:absolute;top:-9px;right:8px;opacity:0;pointer-events:none;cursor:pointer;font-size:11px;color:var(--fg2);background:#2c2c2e;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;transition:.12s;font-family:inherit}
+  .msg .bubble{position:relative}
+  .msg:hover .copy{opacity:1;pointer-events:auto}
+  .copy:hover{color:var(--fg);border-color:rgba(255,255,255,.28)}
 
   footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
   /* DSH 同款输入栏（实测：bg rgb(44,44,46) 浅灰 / 圆角 28 / 无边框 / 无投影） */
@@ -315,15 +323,20 @@
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
     var typing = running ? '<div class="msg typing"><span class="dots"><i></i><i></i><i></i></span>前台正在处理…</div>' : ''
     if (!rows.length){
-      box.innerHTML = typing || '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。</div>'
+      box.innerHTML = typing || '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行，<code>Ctrl+K</code> 聚焦输入框。' + tmplHtml() + '</div>'
       if (atBottom) box.scrollTop = box.scrollHeight
       return
     }
+    // 用会话里的用户消息填充 ↑ 历史（刷新后也能调出上一条）
+    try {
+      var us = rows.filter(function(r){ return r.m.role === 'user' }).map(function(r){ return String(r.m.text || '') }).filter(Boolean)
+      if (us.length > sentHistory.length) sentHistory = us.slice(-30)
+    } catch (err) {}
     box.innerHTML = rows.map(function(r){
       if (r.cls === 'notice') return '<div class="notice">'+esc(r.m.text)+'</div>'
       // 思考过程：浅灰折叠块（仅 Agent 回复，默认收起）
       var think = (r.m.role === 'agent' && r.m.think) ? '<details class="think"><summary>思考过程</summary><div class="tt">'+esc(r.m.think)+'</div></details>' : ''
-      return '<div class="msg '+r.cls+'"><div class="bubble">'+think+'<div class="txt">'+esc(r.m.text)+'</div></div></div>'
+      return '<div class="msg '+r.cls+'"><div class="bubble">'+think+'<div class="txt">'+esc(r.m.text)+'</div><button class="copy" title="复制这条消息">复制</button></div></div>'
     }).join('') + typing
     if (atBottom) box.scrollTop = box.scrollHeight
   }
@@ -458,12 +471,71 @@
     var v = $('input').value.trim()
     if (!v) return
     $('input').value = ''
+    try { localStorage.removeItem(DRAFT_KEY) } catch (err) {}
+    sentHistory.push(v)
+    if (sentHistory.length > 30) sentHistory.shift()
     post('/task', { text: v }, '已发送')
   }
   $('send').onclick = sendTask
   $('input').addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); sendTask() }
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); sendTask(); return }
+    // ↑ 在行首/空内容时调出上一条已发送消息（像终端历史）
+    if (e.key === 'ArrowUp' && !e.shiftKey && !e.altKey){
+      var el = $('input')
+      if (el.value.indexOf('\n') < 0 && el.selectionStart === 0 && sentHistory.length){
+        e.preventDefault(); el.value = sentHistory[sentHistory.length - 1]; saveDraft()
+      }
+    }
   })
+  // ── 便捷功能：草稿保存 / Ctrl+K 聚焦 / 快捷模板 / 一键复制 ──────────────
+  var DRAFT_KEY = 'fr-draft'
+  var sentHistory = []
+  function saveDraft () { try { localStorage.setItem(DRAFT_KEY, $('input').value) } catch (err) {} }
+  function restoreDraft () {
+    try {
+      var d = localStorage.getItem(DRAFT_KEY)
+      if (d && !$('input').value) $('input').value = d
+    } catch (err) {}
+  }
+  $('input').addEventListener('input', saveDraft)
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k'){ e.preventDefault(); $('input').focus() }
+  })
+  var TMPLS = [
+    { t: '📊 汇报当前进度', v: '请读 .board/ 最新状态，用三句话汇报：已完成什么、卡在哪、下一步做什么。' },
+    { t: '▶️ 继续上次任务', v: '继续上次没做完的任务，读 state.md 和最新步骤，直接往下做。' },
+    { t: '🩺 自检', v: '做一次自检：前后台接线、黑板状态、最近一次工具失败原因，各用一行回答。' }
+  ]
+  function tmplHtml(){
+    return '<div class="tmpls">' + TMPLS.map(function(x, i){
+      return '<button class="tmpl" data-i="' + i + '">' + esc(x.t) + '</button>'
+    }).join('') + '</div>'
+  }
+  $('chat').addEventListener('click', function(e){
+    var t = e.target
+    if (t && t.classList && t.classList.contains('tmpl')){
+      var it = TMPLS[Number(t.getAttribute('data-i'))]
+      if (it){ $('input').value = it.v; saveDraft(); $('input').focus() }
+      return
+    }
+    // 一键复制气泡文本
+    if (t && t.classList && t.classList.contains('copy')){
+      var txt = ''
+      try { txt = t.parentNode.querySelector('.txt').textContent } catch (err) {}
+      if (!txt) return
+      var done = function(){ toast('已复制') }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done, function(){ toast('复制失败', true) })
+      } else {
+        try {
+          var ta2 = document.createElement('textarea')
+          ta2.value = txt; document.body.appendChild(ta2); ta2.select()
+          document.execCommand('copy'); ta2.remove(); done()
+        } catch (err) { toast('复制失败', true) }
+      }
+    }
+  })
+  restoreDraft()
   $('btnStart').onclick = function(){ post('/start', {}, '已启动') }
   $('btnStop').onclick = function(){ if(confirm('停止快速反应（取消正在跑的前后台）？')) post('/stop', {}, '已停止') }
   $('btnFire').onclick = function(){ post('/fire', { reason: '用户手动打断' }, '已打断前台') }
