@@ -4,13 +4,33 @@
 
 **前台低档快答快做，后台高档逐步规划 —— 让两个会话像一条流水线那样干活**
 
-[![version](https://img.shields.io/badge/version-1.0.0-blue)](./package.json)
+[![AI Project](https://img.shields.io/badge/项目类型-AI%20Project-8957e5?style=for-the-badge)](#-ai-project-项目说明)
+[![version](https://img.shields.io/badge/version-1.0.2-blue)](./package.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![platform](https://img.shields.io/badge/DeepSeek%20Harness-%E2%89%A5%200.2-6f42c1)](#-安装)
 
 [快速开始](#-安装) · [使用指南](#-五分钟上手) · [API](#-http-api) · [架构](./docs/技术路线.md) · [FAQ](#-faq)
 
 </div>
+
+---
+
+> ## 🤖 AI Project 项目说明
+>
+> **本项目是一个 AI Project（AI 项目）** —— 它运行在 **DeepSeek Harness（DSH）的 Web GUI** 里，
+> 形态是「插件 + 浏览器控制台」，**不是独立的桌面应用，也不是可单独打开的网页**。
+>
+> | 要点 | 说明 |
+> |---|---|
+> | 🧩 形态 | DSH 插件（host 半 + 浏览器侧 UI），装进 profile 后随 DSH 一起运行 |
+> | 🌐 入口 | DSH Web GUI 的侧边栏「快速反应」，或 `http://127.0.0.1:<DSH端口>/fr` |
+> | 🖥️ 界面 | 在**浏览器渲染的原生会话区**内工作（iframe 浮层，像素级贴合 DSH 会话区） |
+> | ⚙️ 技术栈 | Node.js（插件后端）+ 原生 HTML/CSS/JS（无框架）+ DSH Cordis 服务 |
+> | 🚫 不是 | 不是 CLI 工具、不是独立 App、不提供 SaaS 服务、不附带模型额度 |
+> | ✅ 前提 | 必须先有一个能正常运行的 DeepSeek Harness，并具备可用模型 provider |
+>
+> 如果你要的是「装完就能点开用的图形软件」，这个项目不适合；
+> 如果你是**在 DSH Web 里干活、需要双会话编排 + 可视化控制台**，那就装它。
 
 ---
 
@@ -223,6 +243,7 @@ dsh-fast-react/
 ## 📄 License
 
 MIT © 2026 — 见 [LICENSE](./LICENSE)
+
 
 
 
