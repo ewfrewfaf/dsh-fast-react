@@ -1,0 +1,4 @@
+# dsh-fast-react bundle patch
+- insert:
+    - id: dsh-fast-react
+      name: "@dsh-external/dsh-fast-react"
