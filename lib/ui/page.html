@@ -325,7 +325,12 @@
   $('btnDrawer').onclick = function(){ drawer(!$('drawer').classList.contains('open')) }
   $('btnCloseDrawer').onclick = function(){ drawer(false) }
   $('mask').onclick = function(){ drawer(false) }
-  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') drawer(false) })
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return
+    // 抽屉开着 → 先收抽屉；否则通知父页面关闭整个面板（嵌在 DSH 里时 ESC 应能退出）
+    if ($('drawer').classList.contains('open')) { drawer(false); return }
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ fr: 'close' }, '*') } catch (err) {}
+  })
 
   load()
   setInterval(load, 1000)
