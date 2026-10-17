@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # ⚡ 快速反应 · dsh-fast-react
 
@@ -45,9 +45,9 @@
 ### 方式 A：tgz（推荐，离线可用）
 
 ```bash
-# 1) 下载 Release 里的 dsh-fast-react-1.0.0.tgz
+# 1) 下载 Release 里的 dsh-fast-react-1.0.2.tgz
 # 2) 装进 profile
-dsh plugin --profile desktop add ./dsh-fast-react-1.0.0.tgz
+dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
 # 3) 重启一次 DSH
 ```
 
@@ -195,9 +195,8 @@ curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' \
 **面板会盖住右下角挂件吗？**
 会。面板按原生会话区矩形整体覆盖，这是当前的取舍（可加排除区域，未做）。
 
-**能和 Hindsight 记忆插件一起用吗？**
-可以，互不依赖。若记忆不自动存，检查 `~/.hindsight/coding-agent.json` 的 `retainSessions: true`；
-换抽取模型改 `~/.hindsight/profiles/coding-agent.env`。
+**能和记忆 / 审计类插件一起用吗？**
+可以，互不依赖、也不改 DSH 的 DOM 与全局配置。长期记忆请按你所装记忆插件自己的官方文档配置（模型、存储位置等由它决定）。
 
 ---
 
@@ -224,3 +223,5 @@ dsh-fast-react/
 ## 📄 License
 
 MIT © 2026 — 见 [LICENSE](./LICENSE)
+
+
