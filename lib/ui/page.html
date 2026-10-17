@@ -161,6 +161,8 @@
   .gm-dot.miss{color:#e06c75;border-color:rgba(224,108,117,.4);background:rgba(224,108,117,.08)}
   .gm-ops{display:flex;gap:6px;flex:0 0 auto}
   .gm-ops button{padding:4px 10px;font-size:12px;border-radius:8px}
+  .gm-perm{flex:0 0 auto;max-width:136px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg2);font-size:11.5px;padding:4px 6px;outline:none}
+  .gm-perm:focus{border-color:rgba(122,170,255,.55);color:var(--fg)}
   .gm-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted)}
   .gm-empty{padding:24px 10px;text-align:center;color:var(--muted);font-size:12.5px}
 
@@ -240,6 +242,7 @@
       <span class="chip">前台 <b id="fphase">—</b></span>
       <span class="chip">后台 <b id="bphase">—</b></span>
       <span class="chip" id="modelChip" style="display:none">模型 <b id="modelTxt">—</b></span>
+      <span class="chip" id="permChip" style="display:none">权限 <b id="permTxt">—</b></span>
     </span>
     <span class="grow"></span>
     <button id="btnGroups" class="icon" title="会话组管理">▦</button>
@@ -286,6 +289,7 @@
       </div>
       <div class="gm-new">
         <input id="gmTitle" placeholder="标题（可选），例如：桌面整理" maxlength="60" />
+        <select id="gmDefaultPerm" title="新建会话组的默认权限（沙箱模式 + 审批策略）"></select>
         <button id="btnGroupCreate" class="primary">新建会话组</button>
         <button id="btnGroupRepair" class="ghost" title="重建丢失会话 / 纠正编号 / 重新挂到工作区">自愈</button>
       </div>
@@ -466,6 +470,10 @@
       $('modelTxt').textContent = d.models.model
       $('modelLabel').textContent = d.models.model            // 输入栏右下模型切换器标签
     }
+    if (d.permissions && (d.permissions.front || d.permissions.back)){
+      $('permChip').style.display=''
+      $('permTxt').textContent = (d.permissions.front || '—') + (d.permissions.back && d.permissions.back !== d.permissions.front ? ' / ' + d.permissions.back : '')
+    }
     $('btnStop').disabled = !d.enabled
   }
 
@@ -613,6 +621,23 @@
   function groupsOpen(open){ $('groupsModal').classList.toggle('show', !!open) }
   function renderGroups(d){
     var list = d.groups || []
+    var perm = d.permission || { options: [] }
+    // 新建默认权限下拉（只初始化一次，之后只同步值）
+    var dsel = $('gmDefaultPerm')
+    if (dsel){
+      if (!dsel.getAttribute('data-init')){
+        dsel.setAttribute('data-init', '1')
+        dsel.innerHTML = '<option value="">新建默认：跟随 DSH</option>' + (perm.options || []).map(function(o){
+          return '<option value="' + esc(o.value) + '">新建默认：' + esc(o.name || o.value) + '</option>'
+        }).join('')
+        dsel.onchange = function(){
+          api('/config', { method: 'POST', body: JSON.stringify({ permissionPreset: dsel.value }) })
+            .then(function(){ toast('新建会话组默认权限：' + (dsel.value || '跟随 DSH')); loadGroups() })
+            .catch(function(e){ toast('保存失败：' + e.message, true) })
+        }
+      }
+      dsel.value = d.defaultPreset || ''
+    }
     if (!list.length){
       $('gmList').innerHTML = '<div class="gm-empty">还没有会话组，点上方「新建会话组」。</div>'
       return
@@ -620,11 +645,17 @@
     $('gmList').innerHTML = list.map(function(g){
       var cls = function(p){ return p === 'missing' ? 'miss' : (p === 'running' ? 'run' : '') }
       var f = g.frontPhase || 'missing', b = g.backPhase || 'missing'
+      var opts = (perm.options || []).map(function(o){
+        return '<option value="' + esc(o.value) + '"' + (o.value === (g.preset || '') ? ' selected' : '') + '>' + esc(o.name || o.value) + '</option>'
+      }).join('')
       return '<div class="gm-row ' + (g.active ? 'active' : '') + '">' +
         '<span class="gm-key">' + esc(g.key) + '</span>' +
         '<div class="gm-info"><div class="gm-title">' + esc(g.title || '') + (g.active ? ' <span style="color:#7aaaff;font-size:11px">· 当前</span>' : '') + '</div>' +
         '<div class="gm-ids">' + esc(String(g.frontId || '').slice(0, 28)) + ' / ' + esc(String(g.backId || '').slice(0, 28)) + '</div></div>' +
         '<div class="gm-st"><span class="gm-dot ' + cls(f) + '">F ' + esc(f) + '</span><span class="gm-dot ' + cls(b) + '">B ' + esc(b) + '</span></div>' +
+        '<select class="gm-perm" data-key="' + esc(g.key) + '" title="该组前后台的权限（沙箱模式 + 审批策略）；「跟随默认」= DSH 默认">' +
+          '<option value=""' + (g.preset ? '' : ' selected') + '>跟随默认</option>' + opts +
+        '</select>' +
         '<div class="gm-ops"><button class="ghost" data-act="switch" data-key="' + esc(g.key) + '">切换</button>' +
         '<button class="ghost" data-act="del" data-key="' + esc(g.key) + '">删除</button></div></div>'
     }).join('')
@@ -667,6 +698,19 @@
         load()
       })
     }
+  })
+  // 权限下拉：选中即应用（沙箱模式 + 审批策略一起生效）
+  $('gmList').addEventListener('change', function(e){
+    var t = e.target
+    if (!t || !t.classList || !t.classList.contains('gm-perm')) return
+    var key = t.getAttribute('data-key'), preset = t.value
+    api('/groups', { method: 'POST', body: JSON.stringify({ action: 'policy', key: key, preset: preset }) })
+      .then(function(r){
+        var live = r && (r.frontPreset || r.backPreset)
+        toast('权限设为 ' + (preset || '跟随默认') + (live ? '（当前生效: ' + live + '）' : ''))
+        loadGroups()
+      })
+      .catch(function(err){ toast('设置权限失败：' + err.message, true); loadGroups() })
   })
 
   function drawer(open){
