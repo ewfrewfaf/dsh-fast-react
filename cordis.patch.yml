@@ -1,0 +1,5 @@
+# dsh-fast-react bundle patch
+# 安装方式：把本包加入 profile 的 dsh.profile.bundles，DSH 会自动应用这个 patch。
+- insert:
+    - id: dsh-fast-react
+      name: dsh-fast-react

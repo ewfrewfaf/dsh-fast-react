@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>快速反应</title>
+<style>
+  :root{
+    /* ══ DSH 官方主题 token（--dsw-alias-*）：同源 iframe 内由底部脚本从父页面
+       实时同步真实值；独立打开（无父页）时用下面的 fallback，色值与 DSH 暗色一致 ══ */
+    --dsw-alias-bg-base:#0d1117;
+    --dsw-alias-bg-layer-1:#161b22;
+    --dsw-alias-bg-layer-2:#1c2128;
+    --dsw-alias-bg-overlay:#1c2128;
+    --dsw-alias-border-l1:#30363d;
+    --dsw-alias-border-l2:#3d444d;
+    --dsw-alias-brand-primary:#1f6feb;
+    --dsw-alias-label-primary:#e6edf3;
+    --dsw-alias-label-secondary:#8b949e;
+    --dsw-alias-state-success-primary:#3fb950;
+    --dsw-alias-state-warn-primary:#d29922;
+    --dsw-alias-state-error-primary:#f85149;
+    --dsw-alias-state-idle-primary:#6e7681;
+
+    /* 语义别名：全站颜色都走这两个来源（同步后的 dsw 值优先） */
+    --bg:var(--dsw-alias-bg-base); --bg2:var(--dsw-alias-bg-layer-1); --bg3:var(--dsw-alias-bg-layer-2);
+    --line:var(--dsw-alias-border-l1); --line2:var(--dsw-alias-border-l2);
+    --fg:var(--dsw-alias-label-primary); --fg2:var(--dsw-alias-label-secondary); --muted:var(--dsw-alias-state-idle-primary);
+    --accent:var(--dsw-alias-brand-primary);
+    --ok:var(--dsw-alias-state-success-primary); --warn:var(--dsw-alias-state-warn-primary); --err:var(--dsw-alias-state-error-primary);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{background:var(--panel-fill,var(--bg));color:var(--fg);font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+  /* 极简顶栏：无底色填充，只保留底部一条对齐的分割线 */
+  /* 顶栏 = DSH 页签行同款（实测：26px 高、灰线 1px rgba(255,255,255,.16)、
+     左起点 x=284 = padding 20；chrome bar 占上方 50px 对应 DSH titleRow） */
+  header{display:flex;align-items:center;gap:10px;height:26px;box-sizing:border-box;padding:0 20px;background:transparent;border-bottom:1px solid rgba(255,255,255,.16);flex:0 0 auto;overflow:hidden;white-space:nowrap}
+  header .chips{display:flex;gap:6px;flex:0 0 auto}
+  header .chip{padding:1px 8px;font-size:11px;border-radius:999px}
+  header button{padding:2px 10px;font-size:12px;border-radius:6px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .dot.on{background:var(--ok);box-shadow:0 0 7px var(--ok)}
+  .dot.busy{background:var(--warn);box-shadow:0 0 7px var(--warn);animation:pulse 1.2s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .title{font-weight:500;font-size:13px;letter-spacing:.2px;color:var(--fg2);display:none} /* 标题在 chrome bar，避免重复 */
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{padding:2px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:11.5px;color:var(--fg2);white-space:nowrap}
+  .chip b{color:var(--fg);font-weight:600}
+  .grow{flex:1}
+  button{cursor:pointer;border:1px solid var(--line);background:var(--bg3);color:var(--fg);padding:6px 12px;border-radius:8px;font-size:12.5px;font-family:inherit;transition:.14s}
+  button:hover:not(:disabled){border-color:var(--line2);background:var(--bg-overlay,var(--bg3))}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover:not(:disabled){filter:brightness(1.12)}
+  button.ghost{background:transparent}
+  button.icon{padding:6px 9px;font-size:14px;line-height:1}
+
+  main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative}
+  #chat{flex:1 1 auto;overflow:auto;padding:20px 22px 8px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:1040px;margin:0 auto}
+  #chat::-webkit-scrollbar{width:10px}
+  #chat::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+  .empty{margin:auto;text-align:center;color:var(--muted);max-width:480px;line-height:2}
+  .empty b{color:var(--fg2);display:block;margin-bottom:10px;font-size:16px}
+  .empty code{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px var(--mono);color:#d2a8ff}
+
+  /* 消息：DSH 同款 —— 不标人（只有两个角色），用户=浅灰气泡右对齐，Agent=纯文本左侧 */
+  .msg{display:flex;max-width:min(92%,900px)}
+  .msg.me{align-self:flex-end}
+  .avatar{display:none}
+  .bubble{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .bubble .who{display:none}
+  .bubble .txt{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;color:var(--fg)}
+  .msg.me .bubble .txt{background:rgb(44,44,46);border-radius:18px;padding:10px 16px}
+  .msg:not(.me) .bubble .txt{background:transparent;padding:0 2px}
+  /* 思考过程：浅灰折叠块（默认收起，点开看推理） */
+  .think{margin:0 0 8px}
+  .think summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:999px;padding:4px 12px;user-select:none}
+  .think summary::-webkit-details-marker{display:none}
+  .think summary::before{content:'▸';font-size:10px;opacity:.8;transition:transform .15s}
+  .think[open] summary::before{transform:rotate(90deg)}
+  .think summary:hover{color:var(--fg2);background:rgba(255,255,255,.075)}
+  .think .tt{margin-top:7px;padding:9px 13px;background:rgba(255,255,255,.035);border-left:2px solid rgba(255,255,255,.12);border-radius:0 10px 10px 0;color:var(--muted);font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto}
+  /* 运行指示：前台在跑时必须有反馈，否则看起来像死了 */
+  .msg.typing{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;padding:2px 4px}
+  .dots{display:inline-flex;gap:3px}
+  .dots i{width:5px;height:5px;border-radius:50%;background:var(--fg2);display:block;animation:blink 1.2s infinite}
+  .dots i:nth-child(2){animation-delay:.2s}
+  .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.22;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
+  /* 可操作通知（T3 确认 / 哨兵 / 上交）：必须显眼，否则用户看不到卡点 */
+  .notice{align-self:center;max-width:86%;font-size:12.5px;line-height:1.65;color:#e3c07b;background:rgba(227,192,123,.07);border:1px solid rgba(227,192,123,.28);border-radius:10px;padding:7px 13px;white-space:pre-wrap;word-break:break-word}
+  /* 便捷功能：快捷模板 / 悬停复制 */
+  .tmpls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+  .tmpl{cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--fg2);border-radius:999px;padding:6px 13px;font-size:12.5px;font-family:inherit;transition:.14s}
+  .tmpl:hover{background:rgba(255,255,255,.1);color:var(--fg);border-color:rgba(255,255,255,.2)}
+  .copy{position:absolute;top:-9px;right:8px;opacity:0;pointer-events:none;cursor:pointer;font-size:11px;color:var(--fg2);background:#2c2c2e;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;transition:.12s;font-family:inherit}
+  .msg .bubble{position:relative}
+  .msg:hover .copy{opacity:1;pointer-events:auto}
+  .copy:hover{color:var(--fg);border-color:rgba(255,255,255,.28)}
+  /* 发送即打断开关（胶囊式 toggle） */
+  .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:4px 10px 4px 4px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:transparent;transition:.15s}
+  .switch:hover{background:rgba(255,255,255,.06)}
+  .switch input{display:none}
+  .switch .slider{position:relative;width:30px;height:17px;border-radius:999px;background:rgba(255,255,255,.16);transition:.15s;flex:0 0 auto}
+  .switch .slider::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#d8dde3;transition:.15s}
+  .switch .sw-lbl{font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .switch input:checked + .slider{background:#c2453d}
+  .switch input:checked + .slider::after{transform:translateX(13px);background:#fff}
+  .switch input:checked ~ .sw-lbl{color:#e88b84}
+
+  footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
+  /* DSH 同款输入栏（实测：bg rgb(44,44,46) 浅灰 / 圆角 28 / 无边框 / 无投影） */
+  .composer{position:relative;display:flex;flex-direction:column;gap:9px;background:rgb(44,44,46);border:0;border-radius:28px;padding:16px 18px 10px;transition:.15s;width:100%;max-width:1040px;margin:0 auto}
+  .composer:focus-within{outline:none}
+  .composer textarea{width:100%;min-height:52px;max-height:210px;resize:none;background:transparent;color:var(--fg);border:0;outline:none;font:14.5px/1.6 inherit;padding:2px 4px}
+  .composer textarea::placeholder{color:var(--muted)}
+  .composer .bar{display:flex;align-items:center;gap:8px}
+  .composer .bar .hint{font-size:11.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  /* 胶囊按钮（DSH 权限胶囊同款：透明底 + 细描边） */
+  .composer .pill{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--fg2);border-radius:999px;padding:6px 14px;font-size:12.5px}
+  .composer .pill:hover{background:rgba(255,255,255,.06);color:var(--fg);border-color:rgba(255,255,255,.22)}
+  /* 模型切换器：DSH 同位置（输入栏右下、发送键左侧），透明底 8px 圆角 28px 高 */
+  #btnModel{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #btnModel:hover{background:rgba(255,255,255,.07);color:var(--fg)}
+  #btnModel .caret{font-size:10px;opacity:.7}
+  #modelMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #modelMenu.show{display:block}
+  #modelMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #modelMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #modelMenu .op:hover{background:rgba(255,255,255,.08)}
+  #modelMenu .op.cur{color:#7aaaff}
+  #modelMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
+  .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s}
+  .send:hover:not(:disabled){filter:brightness(1.12)}
+  .send:disabled{opacity:.4;cursor:not-allowed}
+
+  #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
+  #mask.show{display:block}
+  /* 会话组管理弹层 */
+  #groupsModal{position:absolute;top:56px;right:16px;bottom:80px;width:min(560px,92vw);background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
+  #groupsModal.show{display:flex}
+  .gm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .gm-hint{font-size:11px;color:var(--muted)}
+  .gm-new{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .gm-new input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:var(--fg);padding:7px 11px;font-size:13px;outline:none}
+  .gm-new input:focus{border-color:rgba(122,170,255,.55)}
+  #gmList{flex:1 1 auto;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+  .gm-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)}
+  .gm-row.active{border-color:rgba(122,170,255,.5);background:rgba(122,170,255,.08)}
+  .gm-key{font:12px/1 var(--mono);color:#7aaaff;background:rgba(122,170,255,.12);border:1px solid rgba(122,170,255,.3);border-radius:7px;padding:5px 8px;flex:0 0 auto}
+  .gm-info{flex:1;min-width:0}
+  .gm-title{font-size:13px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gm-ids{font:10.5px/1.5 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gm-st{display:flex;gap:6px;flex:0 0 auto}
+  .gm-dot{font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.14);color:var(--fg2)}
+  .gm-dot.run{color:#f0c674;border-color:rgba(240,198,116,.4);background:rgba(240,198,116,.08)}
+  .gm-dot.miss{color:#e06c75;border-color:rgba(224,108,117,.4);background:rgba(224,108,117,.08)}
+  .gm-ops{display:flex;gap:6px;flex:0 0 auto}
+  .gm-ops button{padding:4px 10px;font-size:12px;border-radius:8px}
+  .gm-perm{flex:0 0 auto;max-width:136px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg2);font-size:11.5px;padding:4px 6px;outline:none}
+  .gm-perm:focus{border-color:rgba(122,170,255,.55);color:var(--fg)}
+  .gm-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted)}
+  .gm-empty{padding:24px 10px;text-align:center;color:var(--muted);font-size:12.5px}
+
+  #drawer{position:absolute;top:0;right:0;bottom:0;width:min(430px,92vw);background:var(--bg2);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;z-index:20;box-shadow:-10px 0 30px rgba(0,0,0,.35)}
+  #drawer.open{transform:none}
+  #drawer .dh{display:flex;align-items:center;padding:11px 15px;border-bottom:1px solid var(--line);gap:10px}
+  #drawer .db{flex:1;overflow:auto;padding:14px 15px}
+  #drawer .db::-webkit-scrollbar{width:9px}
+  #drawer .db::-webkit-scrollbar-thumb{background:#2d333b;border-radius:5px}
+  h4{margin:0 0 9px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:12.5px}
+  .kv .k{color:var(--fg2)} .kv .v{font-family:var(--mono)}
+  .v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.err{color:var(--err)}
+  .sep{height:1px;background:var(--line);margin:15px 0}
+  .steps{display:flex;flex-wrap:wrap;gap:6px}
+  .st{padding:2px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg3);font:12px var(--mono);color:var(--fg2)}
+  .st.done{border-color:#238636;background:rgba(35,134,54,.16);color:#7ee787}
+  .st.cur{border-color:#9e6a03;background:rgba(158,106,3,.18);color:#e3b341}
+  .st.todo{opacity:.5}
+  .ev{font:11.5px/1.5 var(--mono);color:var(--fg2);border-left:2px solid var(--line);padding:2px 0 2px 9px;margin-bottom:5px;word-break:break-all}
+  .ev b{color:var(--fg)} .ev .t{color:var(--muted)}
+  .ev.hot{border-left-color:var(--accent)}
+  .cfgrow{display:flex;gap:8px;margin-top:9px;align-items:center;flex-wrap:wrap}
+  .cfgrow input{width:96px;background:var(--bg3);border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:4px 8px;font:12px var(--mono)}
+
+  .toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);background:var(--bg3);border:1px solid var(--line);border-radius:9px;padding:9px 15px;font-size:12.5px;opacity:0;transition:.22s;pointer-events:none;z-index:99;max-width:70vw}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast.err{border-color:#8b1a1a;color:#ffb4b4}
+
+  body.embed header{padding:8px 14px}
+  body.embed #chat{padding:16px 18px 6px}
+  body.embed footer{padding:8px 14px 12px}
+</style>
+<script>
+/* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
+   这样本页所有 var(--dsw-alias-*) 都变成 DSH 的实时真实色值；
+   无父页（浏览器独立打开）时保持 :root 里的 fallback。每 3s 兜底重同步 + focus 时同步。 */
+(function(){
+  var NAMES=['--dsw-alias-bg-base','--dsw-alias-bg-layer-1','--dsw-alias-bg-layer-2','--dsw-alias-bg-overlay',
+    '--dsw-alias-border-l1','--dsw-alias-border-l2','--dsw-alias-brand-primary',
+    '--dsw-alias-label-primary','--dsw-alias-label-secondary',
+    '--dsw-alias-state-success-primary','--dsw-alias-state-warn-primary',
+    '--dsw-alias-state-error-primary','--dsw-alias-state-idle-primary','--dsw-specific-sidebar-fill'];
+  function sync(){
+    try{
+      if(!window.parent||window.parent===window)return;
+      var ps=window.parent.getComputedStyle(window.parent.document.documentElement);
+      var changed=false;
+      NAMES.forEach(function(n){
+        var v=ps.getPropertyValue(n);
+        if(v){v=v.trim();if(v){document.documentElement.style.setProperty(n,v);changed=true}}
+      });
+      // ★ 面板底色 = DSH 会话区实底色（实测 rgb(21,21,23)=#151517 深灰，
+      //   近黑 bg-base 在灰色侧边栏衬托下对比过强——用户反馈改深灰）
+      try{
+        var col=window.parent.document.querySelector('[class*="centerCol"]');
+        if(col){
+          var bg=window.parent.getComputedStyle(col).backgroundColor;
+          if(bg&&bg!=='rgba(0, 0, 0, 0)'&&bg!=='transparent')document.documentElement.style.setProperty('--panel-fill',bg);
+        }
+      }catch(e){}
+      return changed;
+    }catch(e){return false}
+  }
+  sync();
+  setInterval(sync,3000);
+  window.addEventListener('focus',sync);
+})();
+</script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span id="live" class="dot"></span>
+    <span class="title">快速反应</span>
+    <span class="chips">
+      <span class="chip">前台 <b id="fphase">—</b></span>
+      <span class="chip">后台 <b id="bphase">—</b></span>
+      <span class="chip" id="modelChip" style="display:none">模型 <b id="modelTxt">—</b></span>
+      <span class="chip" id="permChip" style="display:none">权限 <b id="permTxt">—</b></span>
+    </span>
+    <span class="grow"></span>
+    <button id="btnGroups" class="icon" title="会话组管理">▦</button>
+    <button id="btnDrawer" class="icon" title="技术面板">⚙</button>
+    <button id="btnStart" class="primary" title="启动">启动</button>
+    <button id="btnStop" class="ghost" title="停止">停止</button>
+  </header>
+
+  <main>
+    <div id="chat">
+      <div class="empty">
+        <b>跟你的前台 Agent 说点什么</b>
+        发一句任务描述，它会立刻开干；复杂任务会自动拉后台规划。<br/>
+        按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。
+      </div>
+    </div>
+    <footer>
+      <div class="composer">
+        <textarea id="input" placeholder="发消息或创建任务..."></textarea>
+        <div class="bar">
+          <span class="hint" id="hint">就绪</span>
+          <!-- 发送即打断开关：开 = 回车先打断再立即投递；关 = 排队（默认） -->
+          <label class="switch" id="fireSwitch" title="打开后：回车发送会先打断前台当前生成，再立刻投递新消息；关闭则排队到下一步">
+            <input type="checkbox" id="fireMode" />
+            <span class="slider"></span>
+            <span class="sw-lbl">发送即打断</span>
+          </label>
+          <span class="grow"></span>
+          <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
+          <button id="send" class="send" title="发送 (Enter)">↑</button>
+        </div>
+        <div id="modelMenu"></div>
+      </div>
+    </footer>
+
+    <div id="mask"></div>
+    <!-- 会话组管理：编号由服务端生成，界面只读（防改号） -->
+    <div id="groupsModal">
+      <div class="gm-head">
+        <b>会话组管理</b>
+        <span class="gm-hint">编号由系统分配 · 不可修改</span>
+        <span class="grow"></span>
+        <button id="btnGroupsClose" class="ghost" style="padding:4px 10px">关闭</button>
+      </div>
+      <div class="gm-new">
+        <input id="gmTitle" placeholder="标题（可选），例如：桌面整理" maxlength="60" />
+        <select id="gmDefaultPerm" title="新建会话组的默认权限（沙箱模式 + 审批策略）"></select>
+        <button id="btnGroupCreate" class="primary">新建</button>
+        <button id="btnGroupAdopt" class="ghost" title="把当前已接线的前后台直接收编成一个组（不新建会话）">收编当前</button>
+        <button id="btnGroupRepair" class="ghost" title="重建丢失会话 / 纠正编号 / 重新挂到工作区">自愈</button>
+      </div>
+      <div id="gmList"></div>
+      <div class="gm-foot">每组 = 前台 + 后台两个会话，全部挂在「快速反应」工作区下，可在 DSH 侧边栏直接打开。</div>
+    </div>
+    <aside id="drawer">
+      <div class="dh">
+        <b style="font-size:13px">技术面板</b>
+        <span class="grow"></span>
+        <button id="btnCloseDrawer" class="ghost" style="padding:4px 9px">关闭</button>
+      </div>
+      <div class="db">
+        <h4>任务进度</h4>
+        <div class="kv" id="progBox"></div>
+        <div class="steps" id="steps" style="margin-top:9px"></div>
+        <div class="sep"></div>
+        <h4>路线检查</h4>
+        <div class="kv" id="loopBox"></div>
+        <div class="sep"></div>
+        <h4>效率指标</h4>
+        <div class="kv" id="metrics"></div>
+        <div class="sep"></div>
+        <h4>唤醒分布</h4>
+        <div class="kv" id="wakes"></div>
+        <div class="sep"></div>
+        <h4>计数</h4>
+        <div class="kv" id="counters"></div>
+        <div class="sep"></div>
+        <h4>事件流</h4>
+        <div id="events"></div>
+        <div class="sep"></div>
+        <h4>操作与配置</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btnRebuild">重建会话</button>
+          <button id="btnCfg">保存限额</button>
+        </div>
+        <div class="cfgrow">
+          <span style="font-size:12px;color:var(--fg2)">前台上限</span>
+          <input id="cFront" type="number" min="1000" step="1000" />
+          <span style="font-size:12px;color:var(--fg2)">后台上限</span>
+          <input id="cBack" type="number" min="1000" step="1000" />
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id) }
+  var EMBED = /(\?|&)embed=1/.test(location.search)
+  if (EMBED) document.body.classList.add('embed')
+  var lastChatKey = '', lastCount = 0
+
+  function toast(msg, isErr){
+    var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : '')
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.className = 'toast' }, 2600)
+  }
+  function api(path, opts){
+    return fetch('/fr/api' + path, Object.assign({ headers:{ 'content-type':'application/json' }, credentials:'same-origin' }, opts||{}))
+      .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || ('HTTP '+r.status)); return j }) })
+  }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c] }) }
+  function fmtMs(ms){ return ms==null ? '—' : (ms<1000 ? Math.round(ms)+'ms' : (ms/1000).toFixed(1)+'s') }
+  function fmtK(n){ return n==null ? '—' : (n>=1000 ? (n/1000).toFixed(1)+'k' : String(n)) }
+  function tOf(s){ s = String(s||''); return s.length > 19 ? s.slice(11,19) : s }
+
+  // 系统注入话术（防御性兜底：服务端已过滤一遍）
+  var SYS_RE = /^(【快速反应|<system-reminder|Current runtime context|Time sampled while|本环境装有|You are an AI agent|This is an automatically generated)/
+
+  function renderChat(d){
+    var chat = d.chat || {}
+    var rows = []
+    // ★ 不标人：只有两个角色（用户 / Agent），用户靠右浅灰气泡，Agent 左侧纯文本
+    ;(chat.front || []).forEach(function(m){
+      if (m.role === 'notice') { rows.push({ m:m, cls:'notice' }); return }
+      if (m.role !== 'user' && m.role !== 'agent') return
+      if (m.role === 'user' && (SYS_RE.test(String(m.text||'')) || /<system-reminder>/.test(String(m.text||'')))) return
+      rows.push({ m:m, cls: m.role === 'user' ? 'me' : '' })
+    })
+    ;(chat.back || []).forEach(function(m){ rows.push({ m:m, cls: '' }) })
+    rows.sort(function(a,b){ return String(a.m.at).localeCompare(String(b.m.at)) })
+    var running = !!(d.front && d.front.phase === 'running')
+    var tail = rows.length ? rows[rows.length-1].m : null
+    var key = rows.length + '|' + (tail ? String(tail.at) + String(tail.text).slice(0,40) + '|' + String(tail.think || '').length : '') + '|' + (running ? 'R' : '')
+    if (key === lastChatKey) return
+    lastChatKey = key
+    var box = $('chat')
+    var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
+    var typing = running ? '<div class="msg typing"><span class="dots"><i></i><i></i><i></i></span>前台正在处理…</div>' : ''
+    if (!rows.length){
+      box.innerHTML = typing || '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行，<code>Ctrl+K</code> 聚焦输入框。' + tmplHtml() + '</div>'
+      if (atBottom) box.scrollTop = box.scrollHeight
+      return
+    }
+    // 用会话里的用户消息填充 ↑ 历史（刷新后也能调出上一条）
+    try {
+      var us = rows.filter(function(r){ return r.m.role === 'user' }).map(function(r){ return String(r.m.text || '') }).filter(Boolean)
+      if (us.length > sentHistory.length) sentHistory = us.slice(-30)
+    } catch (err) {}
+    box.innerHTML = rows.map(function(r){
+      if (r.cls === 'notice') return '<div class="notice">'+esc(r.m.text)+'</div>'
+      // 思考过程：浅灰折叠块（仅 Agent 回复，默认收起）
+      var think = (r.m.role === 'agent' && r.m.think) ? '<details class="think"><summary>思考过程</summary><div class="tt">'+esc(r.m.think)+'</div></details>' : ''
+      return '<div class="msg '+r.cls+'"><div class="bubble">'+think+'<div class="txt">'+esc(r.m.text)+'</div><button class="copy" title="复制这条消息">复制</button></div></div>'
+    }).join('') + typing
+    if (atBottom) box.scrollTop = box.scrollHeight
+  }
+
+  function renderTech(d){
+    var done = (d.state && d.state.done) || 'S0'
+    var total = (d.steps && d.steps.length) || 0
+    var doneNo = parseInt(String(done).replace(/\D/g,''),10) || 0
+    var pct = total ? Math.min(100, Math.round(doneNo/total*100)) : 0
+    $('progBox').innerHTML =
+      '<span class="k">状态</span><span class="v">'+esc((d.state&&d.state.status)||'—')+'</span>' +
+      '<span class="k">进度</span><span class="v">'+doneNo+' / '+total+'（'+pct+'%）</span>'
+    var sl = []
+    ;(d.steps||[]).forEach(function(f){
+      var n = parseInt(String(f).replace(/\D/g,''),10)
+      var cls = n <= doneNo ? 'done' : (n === doneNo+1 ? 'cur' : 'todo')
+      sl.push('<span class="st '+cls+'">'+esc(String(f).replace('.md',''))+'</span>')
+    })
+    $('steps').innerHTML = sl.join('') || '<span style="color:var(--muted);font-size:12px">无步骤</span>'
+
+    var ms = d.milestones || 0
+    var okLoop = ms > 0 && ms === total
+    $('loopBox').innerHTML =
+      '<span class="k">里程碑</span><span class="v">'+ms+'</span>' +
+      '<span class="k">步骤</span><span class="v">'+total+'</span>' +
+      '<span class="k">一致性</span><span class="v '+(okLoop?'ok':(ms?'warn':''))+'">'+(okLoop?'✓ 对齐':(ms?'⚠ 不一致':'—'))+'</span>' +
+      '<span class="k">route</span><span class="v">'+(d.routeRendered?'fr_route':'手写')+' · '+fmtK(d.routeSize)+'字</span>' +
+      '<span class="k">哨兵</span><span class="v">'+(d.renderedSn==null?'—':d.renderedSn)+'</span>'
+
+    var ff = d.firstFrameMs
+    $('metrics').innerHTML =
+      '<span class="k">首帧</span><span class="v '+(ff!=null&&ff<15000?'ok':(ff?'warn':''))+'">'+fmtMs(ff)+'</span>' +
+      '<span class="k">投递</span><span class="v ok">'+fmtMs(d.lastWatchMs)+'</span>' +
+      '<span class="k">前台上下文</span><span class="v">'+fmtK(d.ctx&&d.ctx.front)+' / '+fmtK(d.limits&&d.limits.front)+'</span>' +
+      '<span class="k">后台上下文</span><span class="v">'+fmtK(d.ctx&&d.ctx.back)+' / '+fmtK(d.limits&&d.limits.back)+'</span>' +
+      '<span class="k">最近压缩</span><span class="v">'+(d.lastCompact?(fmtK(d.lastCompact.before)+'→'+fmtK(d.lastCompact.after)):'—')+'</span>'
+
+    var wb = d.wakeBy||{}, wl=[]
+    Object.keys(wb).forEach(function(k){ wl.push('<span class="k">'+esc(k)+'</span><span class="v">'+wb[k]+'</span>') })
+    $('wakes').innerHTML = wl.join('') || '<span class="k">—</span><span class="v">0</span>'
+
+    var t = d.tools||{}
+    $('counters').innerHTML =
+      '<span class="k">工具</span><span class="v">'+(t.total||0)+'</span>' +
+      '<span class="k">失败</span><span class="v '+(t.failTotal?'warn':'')+'">'+(t.failTotal||0)+'</span>' +
+      '<span class="k">T3</span><span class="v">'+(d.t3Blocked||0)+'</span>'
+
+    var ev = []
+    ;(d.recent||[]).slice().reverse().forEach(function(x){
+      var det = ''; try { det = x.detail ? JSON.stringify(x.detail) : '' } catch(e){}
+      if (det.length > 70) det = det.slice(0,70)+'…'
+      var hot = /freeze|route-rendered|escalate|interrupt|step-delivered|watcher-fire|api-task/.test(x.kind||'')
+      ev.push('<div class="ev'+(hot?' hot':'')+'"><span class="t">'+esc(tOf(x.at))+'</span> <b>'+esc(x.kind)+'</b> '+esc(det)+'</div>')
+    })
+    $('events').innerHTML = ev.join('') || '<span style="color:var(--muted);font-size:12px">暂无</span>'
+
+    if (!renderTech._cfg){
+      renderTech._cfg = true
+      $('cFront').value = (d.limits && d.limits.front) || 60000
+      $('cBack').value  = (d.limits && d.limits.back)  || 60000
+    }
+  }
+
+  function renderHead(d){
+    var run = (d.front && d.front.phase==='running') || (d.back && d.back.phase==='running')
+    $('live').className = 'dot ' + (run ? 'busy' : 'on')
+    $('fphase').textContent = d.front ? d.front.phase : '未接线'
+    $('bphase').textContent = d.back ? d.back.phase : '未接线'
+    if (d.models && d.models.model){
+      $('modelChip').style.display=''
+      $('modelTxt').textContent = d.models.model
+      $('modelLabel').textContent = d.models.model            // 输入栏右下模型切换器标签
+    }
+    if (d.permissions && (d.permissions.front || d.permissions.back)){
+      $('permChip').style.display=''
+      $('permTxt').textContent = (d.permissions.front || '—') + (d.permissions.back && d.permissions.back !== d.permissions.front ? ' / ' + d.permissions.back : '')
+    }
+    $('btnStop').disabled = !d.enabled
+  }
+
+  // ── 模型切换（DSH 同位置：输入栏右下、发送键左侧）────────────────────────
+  var modelCache = null, modelOpen = false
+  function loadModels(){
+    if (modelCache) return Promise.resolve(modelCache)
+    return api('/models').then(function(m){ modelCache = m; return m }).catch(function(){ return { providers: [], current: {} } })
+  }
+  function renderModelMenu(m){
+    var cur = (m.current && m.current.model) || ''
+    var html = ''
+    ;(m.providers || []).forEach(function(p){
+      html += '<div class="grp">' + esc(p.provider) + '</div>'
+      ;(p.models || []).forEach(function(mo){
+        var isCur = mo === cur
+        html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' + esc(mo) + (isCur ? '<span class="badge">当前</span>' : '') + '</div>'
+      })
+      if (!(p.models || []).length) html += '<div class="op" style="color:var(--muted);cursor:default">（无可用模型列表）</div>'
+    })
+    $('modelMenu').innerHTML = html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>'
+  }
+  function toggleModelMenu(force){
+    var open = typeof force === 'boolean' ? force : !modelOpen
+    modelOpen = open
+    if (open){
+      loadModels().then(function(m){ renderModelMenu(m); $('modelMenu').classList.add('show') })
+    } else $('modelMenu').classList.remove('show')
+  }
+  $('btnModel').onclick = function(e){ e.stopPropagation(); toggleModelMenu() }
+  $('modelMenu').onclick = function(e){
+    var op = e.target && e.target.closest ? e.target.closest('.op') : null
+    if (!op || !op.dataset.m) return
+    var p = op.dataset.p, m = op.dataset.m
+    toggleModelMenu(false)
+    api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m }) })
+      .then(function(){ modelCache = null; toast('模型已切换：' + p + '/' + m); load() })
+      .catch(function(err){ toast('切换失败：' + err.message, true) })
+  }
+  document.addEventListener('click', function(){ if (modelOpen) toggleModelMenu(false) })
+
+  function load(){
+    api('/status').then(function(d){
+      renderHead(d); renderChat(d); renderTech(d)
+      var n = ((d.chat&&d.chat.front)||[]).length + ((d.chat&&d.chat.back)||[]).length
+      if (n !== lastCount){ lastCount = n; $('hint').textContent = n ? (n+' 条消息') : '就绪' }
+    }).catch(function(){
+      $('live').className = 'dot'
+      $('hint').textContent = '连接失败'
+    })
+  }
+
+  function post(path, body, okMsg){
+    return api(path, { method:'POST', body: JSON.stringify(body||{}) })
+      .then(function(){ toast(okMsg); renderTech._cfg = true; load() })
+      .catch(function(e){ toast('失败：'+e.message, true) })
+  }
+  function sendTask(){
+    var v = $('input').value.trim()
+    if (!v) return
+    var interrupt = !!$('fireMode').checked
+    $('input').value = ''
+    try { localStorage.removeItem(DRAFT_KEY) } catch (err) {}
+    sentHistory.push(v)
+    if (sentHistory.length > 30) sentHistory.shift()
+    post('/task', { text: v, interrupt: interrupt }, interrupt ? '已打断并发送' : '已排队')
+  }
+  $('send').onclick = sendTask
+  $('input').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); sendTask(); return }
+    // ↑ 在行首/空内容时调出上一条已发送消息（像终端历史）
+    if (e.key === 'ArrowUp' && !e.shiftKey && !e.altKey){
+      var el = $('input')
+      if (el.value.indexOf('\n') < 0 && el.selectionStart === 0 && sentHistory.length){
+        e.preventDefault(); el.value = sentHistory[sentHistory.length - 1]; saveDraft()
+      }
+    }
+  })
+  // ── 发送即打断开关（持久化）─────────────────────────────────────────
+  var FIRE_KEY = 'fr-fire-mode'
+  function loadFireMode () {
+    try { $('fireMode').checked = localStorage.getItem(FIRE_KEY) === '1' } catch (err) {}
+  }
+  $('fireMode').addEventListener('change', function(){
+    try { localStorage.setItem(FIRE_KEY, $('fireMode').checked ? '1' : '0') } catch (err) {}
+    toast($('fireMode').checked ? '发送即打断：开（回车会先打断）' : '发送即打断：关（回车排队到下一步）')
+  })
+  loadFireMode()
+  // ── 便捷功能：草稿保存 / Ctrl+K 聚焦 / 快捷模板 / 一键复制 ──────────────
+  var DRAFT_KEY = 'fr-draft'
+  var sentHistory = []
+  function saveDraft () { try { localStorage.setItem(DRAFT_KEY, $('input').value) } catch (err) {} }
+  function restoreDraft () {
+    try {
+      var d = localStorage.getItem(DRAFT_KEY)
+      if (d && !$('input').value) $('input').value = d
+    } catch (err) {}
+  }
+  $('input').addEventListener('input', saveDraft)
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k'){ e.preventDefault(); $('input').focus() }
+  })
+  var TMPLS = [
+    { t: '📊 汇报当前进度', v: '请读 .board/ 最新状态，用三句话汇报：已完成什么、卡在哪、下一步做什么。' },
+    { t: '▶️ 继续上次任务', v: '继续上次没做完的任务，读 state.md 和最新步骤，直接往下做。' },
+    { t: '🩺 自检', v: '做一次自检：前后台接线、黑板状态、最近一次工具失败原因，各用一行回答。' }
+  ]
+  function tmplHtml(){
+    return '<div class="tmpls">' + TMPLS.map(function(x, i){
+      return '<button class="tmpl" data-i="' + i + '">' + esc(x.t) + '</button>'
+    }).join('') + '</div>'
+  }
+  $('chat').addEventListener('click', function(e){
+    var t = e.target
+    if (t && t.classList && t.classList.contains('tmpl')){
+      var it = TMPLS[Number(t.getAttribute('data-i'))]
+      if (it){ $('input').value = it.v; saveDraft(); $('input').focus() }
+      return
+    }
+    // 一键复制气泡文本
+    if (t && t.classList && t.classList.contains('copy')){
+      var txt = ''
+      try { txt = t.parentNode.querySelector('.txt').textContent } catch (err) {}
+      if (!txt) return
+      var done = function(){ toast('已复制') }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done, function(){ toast('复制失败', true) })
+      } else {
+        try {
+          var ta2 = document.createElement('textarea')
+          ta2.value = txt; document.body.appendChild(ta2); ta2.select()
+          document.execCommand('copy'); ta2.remove(); done()
+        } catch (err) { toast('复制失败', true) }
+      }
+    }
+  })
+  restoreDraft()
+  $('btnStart').onclick = function(){ post('/start', {}, '已启动') }
+  $('btnStop').onclick = function(){ if(confirm('停止快速反应（取消正在跑的前后台）？')) post('/stop', {}, '已停止') }
+  $('btnRebuild').onclick = function(){ post('/rebuild', {}, '已重建会话') }
+  $('btnCfg').onclick = function(){
+    post('/config', { frontContextLimit: Number($('cFront').value), backContextLimit: Number($('cBack').value) }, '限额已保存')
+  }
+  // ── 会话组管理（FR-01/FR-02…，编号只读）──────────────────────────────
+  function groupsOpen(open){ $('groupsModal').classList.toggle('show', !!open) }
+  function renderGroups(d){
+    var list = d.groups || []
+    var perm = d.permission || { options: [] }
+    // 新建默认权限下拉（只初始化一次，之后只同步值）
+    var dsel = $('gmDefaultPerm')
+    if (dsel){
+      if (!dsel.getAttribute('data-init')){
+        dsel.setAttribute('data-init', '1')
+        dsel.innerHTML = '<option value="">新建默认：跟随 DSH</option>' + (perm.options || []).map(function(o){
+          return '<option value="' + esc(o.value) + '">新建默认：' + esc(o.name || o.value) + '</option>'
+        }).join('')
+        dsel.onchange = function(){
+          api('/config', { method: 'POST', body: JSON.stringify({ permissionPreset: dsel.value }) })
+            .then(function(){ toast('新建会话组默认权限：' + (dsel.value || '跟随 DSH')); loadGroups() })
+            .catch(function(e){ toast('保存失败：' + e.message, true) })
+        }
+      }
+      dsel.value = d.defaultPreset || ''
+    }
+    if (!list.length){
+      $('gmList').innerHTML = '<div class="gm-empty">还没有会话组，点上方「新建会话组」。</div>'
+      return
+    }
+    $('gmList').innerHTML = list.map(function(g){
+      var cls = function(p){ return p === 'missing' ? 'miss' : (p === 'running' ? 'run' : '') }
+      var f = g.frontPhase || 'missing', b = g.backPhase || 'missing'
+      var opts = (perm.options || []).map(function(o){
+        return '<option value="' + esc(o.value) + '"' + (o.value === (g.preset || '') ? ' selected' : '') + '>' + esc(o.name || o.value) + '</option>'
+      }).join('')
+      return '<div class="gm-row ' + (g.active ? 'active' : '') + '">' +
+        '<span class="gm-key">' + esc(g.key) + '</span>' +
+        '<div class="gm-info"><div class="gm-title">' + esc(g.title || '') + (g.active ? ' <span style="color:#7aaaff;font-size:11px">· 当前</span>' : '') + '</div>' +
+        '<div class="gm-ids">' + esc(String(g.frontId || '').slice(0, 28)) + ' / ' + esc(String(g.backId || '').slice(0, 28)) + '</div></div>' +
+        '<div class="gm-st"><span class="gm-dot ' + cls(f) + '">F ' + esc(f) + '</span><span class="gm-dot ' + cls(b) + '">B ' + esc(b) + '</span></div>' +
+        '<select class="gm-perm" data-key="' + esc(g.key) + '" title="该组前后台的权限（沙箱模式 + 审批策略）；「跟随默认」= DSH 默认">' +
+          '<option value=""' + (g.preset ? '' : ' selected') + '>跟随默认</option>' + opts +
+        '</select>' +
+        '<div class="gm-ops"><button class="ghost" data-act="switch" data-key="' + esc(g.key) + '">切换</button>' +
+        '<button class="ghost" data-act="del" data-key="' + esc(g.key) + '">删除</button></div></div>'
+    }).join('')
+  }
+  function loadGroups(){
+    return api('/groups').then(renderGroups).catch(function(e){ toast('读取会话组失败：' + e.message, true) })
+  }
+  function groupAct(body, okMsg){
+    return api('/groups', { method: 'POST', body: JSON.stringify(body) })
+      .then(function(r){ toast(okMsg); loadGroups(); return r })
+      .catch(function(e){ toast('失败：' + e.message, true) })
+  }
+  $('btnGroups').onclick = function(){ groupsOpen(true); loadGroups() }
+  $('btnGroupsClose').onclick = function(){ groupsOpen(false) }
+  $('btnGroupCreate').onclick = function(){
+    var t = ($('gmTitle').value || '').trim()
+    $('btnGroupCreate').disabled = true
+    groupAct({ action: 'create', title: t }, '已新建会话组').then(function(r){
+      $('btnGroupCreate').disabled = false
+      if (r && r.group) { $('gmTitle').value = ''; toast('新建 ' + r.group.key) }
+      load()
+    })
+  }
+  $('btnGroupAdopt').onclick = function(){
+    var t = ($('gmTitle').value || '').trim()
+    $('btnGroupAdopt').disabled = true
+    groupAct({ action: 'create', adopt: true, title: t }, '已收编当前前后台').then(function(r){
+      $('btnGroupAdopt').disabled = false
+      if (r && r.error) return
+      if (r && r.group) { $('gmTitle').value = ''; toast('已收编为 ' + r.group.key) }
+      loadGroups(); load()
+    })
+  }
+  $('btnGroupRepair').onclick = function(){
+    $('btnGroupRepair').disabled = true
+    groupAct({ action: 'repair' }, '自愈完成').then(function(){ $('btnGroupRepair').disabled = false; load() })
+  }
+  $('gmList').addEventListener('click', function(e){
+    var t = e.target
+    if (!t || !t.getAttribute) return
+    var act = t.getAttribute('data-act'), key = t.getAttribute('data-key')
+    if (!act || !key) return
+    if (act === 'switch'){ groupAct({ action: 'switch', key: key }, '已切换 ' + key).then(load) ; return }
+    if (act === 'del'){
+      if (!confirm('删除 ' + key + '？\n前台+后台会话都会停止并移出工作区（日志保留在磁盘）')) return
+      groupAct({ action: 'delete', key: key }, '已删除 ' + key).then(function(r){
+        if (r && r.needForce && confirm(key + ' 正在运行。强制删除？')) {
+          groupAct({ action: 'delete', key: key, force: true }, '已强制删除 ' + key).then(load)
+        }
+        load()
+      })
+    }
+  })
+  // 权限下拉：选中即应用（沙箱模式 + 审批策略一起生效）
+  $('gmList').addEventListener('change', function(e){
+    var t = e.target
+    if (!t || !t.classList || !t.classList.contains('gm-perm')) return
+    var key = t.getAttribute('data-key'), preset = t.value
+    api('/groups', { method: 'POST', body: JSON.stringify({ action: 'policy', key: key, preset: preset }) })
+      .then(function(r){
+        var live = r && (r.frontPreset || r.backPreset)
+        toast('权限设为 ' + (preset || '跟随默认') + (live ? '（当前生效: ' + live + '）' : ''))
+        loadGroups()
+      })
+      .catch(function(err){ toast('设置权限失败：' + err.message, true); loadGroups() })
+  })
+
+  function drawer(open){
+    $('drawer').classList.toggle('open', open)
+    $('mask').classList.toggle('show', open)
+  }
+  $('btnDrawer').onclick = function(){ drawer(!$('drawer').classList.contains('open')) }
+  $('btnCloseDrawer').onclick = function(){ drawer(false) }
+  $('mask').onclick = function(){ drawer(false) }
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return
+    // 抽屉开着 → 先收抽屉；否则通知父页面关闭整个面板（嵌在 DSH 里时 ESC 应能退出）
+    if ($('drawer').classList.contains('open')) { drawer(false); return }
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ fr: 'close' }, '*') } catch (err) {}
+  })
+
+  load()
+  setInterval(load, 1000)
+})();
+</script>
+</body>
+</html>
