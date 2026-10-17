@@ -110,7 +110,7 @@ dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
 
 ## 🔌 HTTP API
 
-Base：`http://127.0.0.1:19387`，`Content-Type: application/json`
+Base：`http://127.0.0.1:<DSH web 端口>`（示例统一写 19387），`Content-Type: application/json`
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -223,5 +223,6 @@ dsh-fast-react/
 ## 📄 License
 
 MIT © 2026 — 见 [LICENSE](./LICENSE)
+
 
 
