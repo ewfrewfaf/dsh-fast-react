@@ -32,7 +32,7 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;height:100%}
-  body{background:var(--bg);color:var(--fg);font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
+  body{background:var(--panel-fill,var(--bg));color:var(--fg);font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
   #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
   /* 极简顶栏：无底色填充，只保留底部一条对齐的分割线 */
@@ -146,6 +146,15 @@
         var v=ps.getPropertyValue(n);
         if(v){v=v.trim();if(v){document.documentElement.style.setProperty(n,v);changed=true}}
       });
+      // ★ 面板底色 = DSH 会话区实底色（实测 rgb(21,21,23)=#151517 深灰，
+      //   近黑 bg-base 在灰色侧边栏衬托下对比过强——用户反馈改深灰）
+      try{
+        var col=window.parent.document.querySelector('[class*="centerCol"]');
+        if(col){
+          var bg=window.parent.getComputedStyle(col).backgroundColor;
+          if(bg&&bg!=='rgba(0, 0, 0, 0)'&&bg!=='transparent')document.documentElement.style.setProperty('--panel-fill',bg);
+        }
+      }catch(e){}
       return changed;
     }catch(e){return false}
   }
