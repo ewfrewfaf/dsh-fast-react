@@ -67,33 +67,41 @@
   .empty b{color:var(--fg2);display:block;margin-bottom:10px;font-size:16px}
   .empty code{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px var(--mono);color:#d2a8ff}
 
-  .msg{display:flex;gap:10px;max-width:min(88%,900px)}
-  .msg.me{align-self:flex-end;flex-direction:row-reverse}
-  .avatar{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:var(--bg3);border:1px solid var(--line)}
-  .msg.me .avatar{background:var(--accent);border-color:var(--accent);color:#fff}
-  .msg.back .avatar{background:var(--bg-overlay,var(--bg3));border-color:var(--line2);color:var(--fg2)}
+  /* 消息：DSH 同款 —— 不标人（只有两个角色），用户=浅灰气泡右对齐，Agent=纯文本左侧 */
+  .msg{display:flex;max-width:min(92%,900px)}
+  .msg.me{align-self:flex-end}
+  .avatar{display:none}
   .bubble{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .bubble .who{font-size:10.5px;letter-spacing:.5px;color:var(--muted)}
-  .bubble .txt{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:9px 13px;white-space:pre-wrap;word-break:break-word;font-size:13.5px;line-height:1.65}
-  .msg.me .bubble .txt{background:color-mix(in srgb, var(--accent) 14%, transparent);border-color:color-mix(in srgb, var(--accent) 45%, transparent)}
-  .msg.back .bubble .txt{border-color:var(--line2)}
+  .bubble .who{display:none}
+  .bubble .txt{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;color:var(--fg)}
+  .msg.me .bubble .txt{background:rgb(44,44,46);border-radius:18px;padding:10px 16px}
+  .msg:not(.me) .bubble .txt{background:transparent;padding:0 2px}
 
   footer{flex:0 0 auto;padding:10px 18px 16px;background:transparent}
-  /* DSH 同款输入框：大圆角、深底、胶囊按钮、圆形蓝色发送键 */
-  .composer{display:flex;flex-direction:column;gap:9px;background:var(--bg2);border:1px solid var(--line);border-radius:24px;padding:16px 16px 11px;transition:.15s;width:100%;max-width:1040px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.25)}
-  .composer:focus-within{border-color:var(--line2)}
+  /* DSH 同款输入栏（实测：bg rgb(44,44,46) 浅灰 / 圆角 28 / 无边框 / 无投影） */
+  .composer{position:relative;display:flex;flex-direction:column;gap:9px;background:rgb(44,44,46);border:0;border-radius:28px;padding:16px 18px 10px;transition:.15s;width:100%;max-width:1040px;margin:0 auto}
+  .composer:focus-within{outline:none}
   .composer textarea{width:100%;min-height:52px;max-height:210px;resize:none;background:transparent;color:var(--fg);border:0;outline:none;font:14.5px/1.6 inherit;padding:2px 4px}
   .composer textarea::placeholder{color:var(--muted)}
   .composer .bar{display:flex;align-items:center;gap:8px}
   .composer .bar .hint{font-size:11.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;white-space:nowrap}
   /* 胶囊按钮（DSH 权限胶囊同款：透明底 + 细描边） */
-  .composer .pill{background:transparent;border:1px solid var(--line);color:var(--fg2);border-radius:999px;padding:7px 15px;font-size:12.5px}
-  .composer .pill:hover{background:var(--bg3);color:var(--fg);border-color:var(--line2)}
+  .composer .pill{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--fg2);border-radius:999px;padding:6px 14px;font-size:12.5px}
+  .composer .pill:hover{background:rgba(255,255,255,.06);color:var(--fg);border-color:rgba(255,255,255,.22)}
+  /* 模型切换器：DSH 同位置（输入栏右下、发送键左侧），透明底 8px 圆角 28px 高 */
+  #btnModel{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #btnModel:hover{background:rgba(255,255,255,.07);color:var(--fg)}
+  #btnModel .caret{font-size:10px;opacity:.7}
+  #modelMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #modelMenu.show{display:block}
+  #modelMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #modelMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #modelMenu .op:hover{background:rgba(255,255,255,.08)}
+  #modelMenu .op.cur{color:#7aaaff}
+  #modelMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
   .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s}
   .send:hover:not(:disabled){filter:brightness(1.12)}
-  .send:disabled{opacity:.45;cursor:default}
   .send:disabled{opacity:.4;cursor:not-allowed}
-  .send:hover:not(:disabled){background:#2f81f7}
 
   #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
   #mask.show{display:block}
@@ -190,13 +198,15 @@
     </div>
     <footer>
       <div class="composer">
-        <textarea id="input" placeholder="发消息，例如：把 src 下所有 .ts 补类型标注并逐个 tsc 校验"></textarea>
+        <textarea id="input" placeholder="发消息或创建任务..."></textarea>
         <div class="bar">
           <span class="hint" id="hint">就绪</span>
           <button id="btnFire" class="pill" title="紧急打断前台">消防打断</button>
           <span class="grow"></span>
+          <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
           <button id="send" class="send" title="发送 (Enter)">↑</button>
         </div>
+        <div id="modelMenu"></div>
       </div>
     </footer>
 
@@ -264,11 +274,19 @@
   function fmtK(n){ return n==null ? '—' : (n>=1000 ? (n/1000).toFixed(1)+'k' : String(n)) }
   function tOf(s){ s = String(s||''); return s.length > 19 ? s.slice(11,19) : s }
 
+  // 系统注入话术（防御性兜底：服务端已过滤一遍）
+  var SYS_RE = /^(【快速反应|<system-reminder|Current runtime context|Time sampled while|本环境装有|You are an AI agent|This is an automatically generated)/
+
   function renderChat(d){
     var chat = d.chat || {}
     var rows = []
-    ;(chat.front || []).forEach(function(m){ rows.push({ m:m, who: m.role==='user'?'你':'前台', cls: m.role==='user'?'me':'', av: m.role==='user'?'你':'前' }) })
-    ;(chat.back || []).forEach(function(m){ rows.push({ m:m, who:'后台', cls:'back', av:'后' }) })
+    // ★ 不标人：只有两个角色（用户 / Agent），用户靠右浅灰气泡，Agent 左侧纯文本
+    ;(chat.front || []).forEach(function(m){
+      if (m.role !== 'user' && m.role !== 'agent') return
+      if (m.role === 'user' && (SYS_RE.test(String(m.text||'')) || /<system-reminder>/.test(String(m.text||'')))) return
+      rows.push({ m:m, cls: m.role === 'user' ? 'me' : '' })
+    })
+    ;(chat.back || []).forEach(function(m){ rows.push({ m:m, cls: '' }) })
     rows.sort(function(a,b){ return String(a.m.at).localeCompare(String(b.m.at)) })
     var key = rows.length + '|' + (rows.length ? String(rows[rows.length-1].m.at) + String(rows[rows.length-1].m.text).slice(0,40) : '')
     if (key === lastChatKey) return
@@ -276,11 +294,11 @@
     var box = $('chat')
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
     if (!rows.length){
-      box.innerHTML = '<div class="empty"><b>跟你的前台 Agent 说点什么</b>发一句任务描述，它会立刻开干；复杂任务会自动拉后台规划。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。</div>'
+      box.innerHTML = '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。</div>'
       return
     }
     box.innerHTML = rows.map(function(r){
-      return '<div class="msg '+r.cls+'"><div class="avatar">'+esc(r.av)+'</div><div class="bubble"><span class="who">'+esc(r.who)+' · '+esc(tOf(r.m.at))+'</span><div class="txt">'+esc(r.m.text)+'</div></div></div>'
+      return '<div class="msg '+r.cls+'"><div class="bubble"><div class="txt">'+esc(r.m.text)+'</div></div></div>'
     }).join('')
     if (atBottom) box.scrollTop = box.scrollHeight
   }
@@ -349,9 +367,51 @@
     $('live').className = 'dot ' + (run ? 'busy' : 'on')
     $('fphase').textContent = d.front ? d.front.phase : '未接线'
     $('bphase').textContent = d.back ? d.back.phase : '未接线'
-    if (d.models && d.models.model){ $('modelChip').style.display=''; $('modelTxt').textContent = d.models.model }
+    if (d.models && d.models.model){
+      $('modelChip').style.display=''
+      $('modelTxt').textContent = d.models.model
+      $('modelLabel').textContent = d.models.model            // 输入栏右下模型切换器标签
+    }
     $('btnStop').disabled = !d.enabled
   }
+
+  // ── 模型切换（DSH 同位置：输入栏右下、发送键左侧）────────────────────────
+  var modelCache = null, modelOpen = false
+  function loadModels(){
+    if (modelCache) return Promise.resolve(modelCache)
+    return api('/models').then(function(m){ modelCache = m; return m }).catch(function(){ return { providers: [], current: {} } })
+  }
+  function renderModelMenu(m){
+    var cur = (m.current && m.current.model) || ''
+    var html = ''
+    ;(m.providers || []).forEach(function(p){
+      html += '<div class="grp">' + esc(p.provider) + '</div>'
+      ;(p.models || []).forEach(function(mo){
+        var isCur = mo === cur
+        html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' + esc(mo) + (isCur ? '<span class="badge">当前</span>' : '') + '</div>'
+      })
+      if (!(p.models || []).length) html += '<div class="op" style="color:var(--muted);cursor:default">（无可用模型列表）</div>'
+    })
+    $('modelMenu').innerHTML = html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>'
+  }
+  function toggleModelMenu(force){
+    var open = typeof force === 'boolean' ? force : !modelOpen
+    modelOpen = open
+    if (open){
+      loadModels().then(function(m){ renderModelMenu(m); $('modelMenu').classList.add('show') })
+    } else $('modelMenu').classList.remove('show')
+  }
+  $('btnModel').onclick = function(e){ e.stopPropagation(); toggleModelMenu() }
+  $('modelMenu').onclick = function(e){
+    var op = e.target && e.target.closest ? e.target.closest('.op') : null
+    if (!op || !op.dataset.m) return
+    var p = op.dataset.p, m = op.dataset.m
+    toggleModelMenu(false)
+    api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m }) })
+      .then(function(){ modelCache = null; toast('模型已切换：' + p + '/' + m); load() })
+      .catch(function(err){ toast('切换失败：' + err.message, true) })
+  }
+  document.addEventListener('click', function(){ if (modelOpen) toggleModelMenu(false) })
 
   function load(){
     api('/status').then(function(d){
