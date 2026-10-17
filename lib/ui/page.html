@@ -1,14 +1,4 @@
-/**
- * 快速反应 · 控制台页面（聊天优先）
- *
- * 设计原则（来自用户反馈 + 项目经验总结）：
- *  - **聊天为主**：用户打开就是要"跟 Agent 说话"，不是看仪表盘
- *  - **技术面板默认折叠**：步骤/指标/事件收进抽屉，需要时展开
- *  - **两种模式**：普通访问 /fr → 完整页面；embed=1（侧边栏内嵌）→ 铺满容器
- *  - 全内联、无外部依赖（Electron 没有 F5，避免分支资源缓存问题）
- *  - 轮询 1s 拉 /fr/api/status（断线自恢复，比 SSE 简单可靠）
- */
-export const PANEL_HTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
@@ -189,7 +179,7 @@ export const PANEL_HTML = `<!DOCTYPE html>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id) }
-  var EMBED = /(\\?|&)embed=1/.test(location.search)
+  var EMBED = /(\?|&)embed=1/.test(location.search)
   if (EMBED) document.body.classList.add('embed')
   var lastChatKey = '', lastCount = 0
 
@@ -230,14 +220,14 @@ export const PANEL_HTML = `<!DOCTYPE html>
   function renderTech(d){
     var done = (d.state && d.state.done) || 'S0'
     var total = (d.steps && d.steps.length) || 0
-    var doneNo = parseInt(String(done).replace(/\\D/g,''),10) || 0
+    var doneNo = parseInt(String(done).replace(/\D/g,''),10) || 0
     var pct = total ? Math.min(100, Math.round(doneNo/total*100)) : 0
     $('progBox').innerHTML =
       '<span class="k">状态</span><span class="v">'+esc((d.state&&d.state.status)||'—')+'</span>' +
       '<span class="k">进度</span><span class="v">'+doneNo+' / '+total+'（'+pct+'%）</span>'
     var sl = []
     ;(d.steps||[]).forEach(function(f){
-      var n = parseInt(String(f).replace(/\\D/g,''),10)
+      var n = parseInt(String(f).replace(/\D/g,''),10)
       var cls = n <= doneNo ? 'done' : (n === doneNo+1 ? 'cur' : 'todo')
       sl.push('<span class="st '+cls+'">'+esc(String(f).replace('.md',''))+'</span>')
     })
@@ -342,4 +332,4 @@ export const PANEL_HTML = `<!DOCTYPE html>
 })();
 </script>
 </body>
-</html>`
+</html>
