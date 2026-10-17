@@ -140,6 +140,30 @@
 
   #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
   #mask.show{display:block}
+  /* 会话组管理弹层 */
+  #groupsModal{position:absolute;top:56px;right:16px;bottom:80px;width:min(560px,92vw);background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
+  #groupsModal.show{display:flex}
+  .gm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .gm-hint{font-size:11px;color:var(--muted)}
+  .gm-new{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .gm-new input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:var(--fg);padding:7px 11px;font-size:13px;outline:none}
+  .gm-new input:focus{border-color:rgba(122,170,255,.55)}
+  #gmList{flex:1 1 auto;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+  .gm-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)}
+  .gm-row.active{border-color:rgba(122,170,255,.5);background:rgba(122,170,255,.08)}
+  .gm-key{font:12px/1 var(--mono);color:#7aaaff;background:rgba(122,170,255,.12);border:1px solid rgba(122,170,255,.3);border-radius:7px;padding:5px 8px;flex:0 0 auto}
+  .gm-info{flex:1;min-width:0}
+  .gm-title{font-size:13px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gm-ids{font:10.5px/1.5 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gm-st{display:flex;gap:6px;flex:0 0 auto}
+  .gm-dot{font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.14);color:var(--fg2)}
+  .gm-dot.run{color:#f0c674;border-color:rgba(240,198,116,.4);background:rgba(240,198,116,.08)}
+  .gm-dot.miss{color:#e06c75;border-color:rgba(224,108,117,.4);background:rgba(224,108,117,.08)}
+  .gm-ops{display:flex;gap:6px;flex:0 0 auto}
+  .gm-ops button{padding:4px 10px;font-size:12px;border-radius:8px}
+  .gm-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted)}
+  .gm-empty{padding:24px 10px;text-align:center;color:var(--muted);font-size:12.5px}
+
   #drawer{position:absolute;top:0;right:0;bottom:0;width:min(430px,92vw);background:var(--bg2);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;z-index:20;box-shadow:-10px 0 30px rgba(0,0,0,.35)}
   #drawer.open{transform:none}
   #drawer .dh{display:flex;align-items:center;padding:11px 15px;border-bottom:1px solid var(--line);gap:10px}
@@ -218,6 +242,7 @@
       <span class="chip" id="modelChip" style="display:none">模型 <b id="modelTxt">—</b></span>
     </span>
     <span class="grow"></span>
+    <button id="btnGroups" class="icon" title="会话组管理">▦</button>
     <button id="btnDrawer" class="icon" title="技术面板">⚙</button>
     <button id="btnStart" class="primary" title="启动">启动</button>
     <button id="btnStop" class="ghost" title="停止">停止</button>
@@ -251,6 +276,22 @@
     </footer>
 
     <div id="mask"></div>
+    <!-- 会话组管理：编号由服务端生成，界面只读（防改号） -->
+    <div id="groupsModal">
+      <div class="gm-head">
+        <b>会话组管理</b>
+        <span class="gm-hint">编号由系统分配 · 不可修改</span>
+        <span class="grow"></span>
+        <button id="btnGroupsClose" class="ghost" style="padding:4px 10px">关闭</button>
+      </div>
+      <div class="gm-new">
+        <input id="gmTitle" placeholder="标题（可选），例如：桌面整理" maxlength="60" />
+        <button id="btnGroupCreate" class="primary">新建会话组</button>
+        <button id="btnGroupRepair" class="ghost" title="重建丢失会话 / 纠正编号 / 重新挂到工作区">自愈</button>
+      </div>
+      <div id="gmList"></div>
+      <div class="gm-foot">每组 = 前台 + 后台两个会话，全部挂在「快速反应」工作区下，可在 DSH 侧边栏直接打开。</div>
+    </div>
     <aside id="drawer">
       <div class="dh">
         <b style="font-size:13px">技术面板</b>
@@ -568,6 +609,66 @@
   $('btnCfg').onclick = function(){
     post('/config', { frontContextLimit: Number($('cFront').value), backContextLimit: Number($('cBack').value) }, '限额已保存')
   }
+  // ── 会话组管理（FR-01/FR-02…，编号只读）──────────────────────────────
+  function groupsOpen(open){ $('groupsModal').classList.toggle('show', !!open) }
+  function renderGroups(d){
+    var list = d.groups || []
+    if (!list.length){
+      $('gmList').innerHTML = '<div class="gm-empty">还没有会话组，点上方「新建会话组」。</div>'
+      return
+    }
+    $('gmList').innerHTML = list.map(function(g){
+      var cls = function(p){ return p === 'missing' ? 'miss' : (p === 'running' ? 'run' : '') }
+      var f = g.frontPhase || 'missing', b = g.backPhase || 'missing'
+      return '<div class="gm-row ' + (g.active ? 'active' : '') + '">' +
+        '<span class="gm-key">' + esc(g.key) + '</span>' +
+        '<div class="gm-info"><div class="gm-title">' + esc(g.title || '') + (g.active ? ' <span style="color:#7aaaff;font-size:11px">· 当前</span>' : '') + '</div>' +
+        '<div class="gm-ids">' + esc(String(g.frontId || '').slice(0, 28)) + ' / ' + esc(String(g.backId || '').slice(0, 28)) + '</div></div>' +
+        '<div class="gm-st"><span class="gm-dot ' + cls(f) + '">F ' + esc(f) + '</span><span class="gm-dot ' + cls(b) + '">B ' + esc(b) + '</span></div>' +
+        '<div class="gm-ops"><button class="ghost" data-act="switch" data-key="' + esc(g.key) + '">切换</button>' +
+        '<button class="ghost" data-act="del" data-key="' + esc(g.key) + '">删除</button></div></div>'
+    }).join('')
+  }
+  function loadGroups(){
+    return api('/groups').then(renderGroups).catch(function(e){ toast('读取会话组失败：' + e.message, true) })
+  }
+  function groupAct(body, okMsg){
+    return api('/groups', { method: 'POST', body: JSON.stringify(body) })
+      .then(function(r){ toast(okMsg); loadGroups(); return r })
+      .catch(function(e){ toast('失败：' + e.message, true) })
+  }
+  $('btnGroups').onclick = function(){ groupsOpen(true); loadGroups() }
+  $('btnGroupsClose').onclick = function(){ groupsOpen(false) }
+  $('btnGroupCreate').onclick = function(){
+    var t = ($('gmTitle').value || '').trim()
+    $('btnGroupCreate').disabled = true
+    groupAct({ action: 'create', title: t }, '已新建会话组').then(function(r){
+      $('btnGroupCreate').disabled = false
+      if (r && r.group) { $('gmTitle').value = ''; toast('新建 ' + r.group.key) }
+      load()
+    })
+  }
+  $('btnGroupRepair').onclick = function(){
+    $('btnGroupRepair').disabled = true
+    groupAct({ action: 'repair' }, '自愈完成').then(function(){ $('btnGroupRepair').disabled = false; load() })
+  }
+  $('gmList').addEventListener('click', function(e){
+    var t = e.target
+    if (!t || !t.getAttribute) return
+    var act = t.getAttribute('data-act'), key = t.getAttribute('data-key')
+    if (!act || !key) return
+    if (act === 'switch'){ groupAct({ action: 'switch', key: key }, '已切换 ' + key).then(load) ; return }
+    if (act === 'del'){
+      if (!confirm('删除 ' + key + '？\n前台+后台会话都会停止并移出工作区（日志保留在磁盘）')) return
+      groupAct({ action: 'delete', key: key }, '已删除 ' + key).then(function(r){
+        if (r && r.needForce && confirm(key + ' 正在运行。强制删除？')) {
+          groupAct({ action: 'delete', key: key, force: true }, '已强制删除 ' + key).then(load)
+        }
+        load()
+      })
+    }
+  })
+
   function drawer(open){
     $('drawer').classList.toggle('open', open)
     $('mask').classList.toggle('show', open)
