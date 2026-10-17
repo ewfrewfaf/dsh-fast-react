@@ -5,7 +5,8 @@
 **前台低档快答快做，后台高档逐步规划 —— 让两个会话像一条流水线那样干活**
 
 [![AI Project](https://img.shields.io/badge/项目类型-AI%20Project-8957e5?style=for-the-badge)](#-ai-project-项目说明)
-[![version](https://img.shields.io/badge/version-1.0.2-blue)](./package.json)
+[![version](https://img.shields.io/github/v/release/Ewfrewfaf/dsh-fast-react?label=version&color=blue)](../../releases)
+[![downloads](https://img.shields.io/github/downloads/Ewfrewfaf/dsh-fast-react/total?label=downloads)](../../releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![platform](https://img.shields.io/badge/DeepSeek%20Harness-%E2%89%A5%200.2-6f42c1)](#-安装)
 
