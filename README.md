@@ -1,3 +1,18 @@
+﻿# 快速反应（dsh-fast-react）
+
+> 前台低档快答快做 + 后台高档逐步规划的双会话编排插件。含独立 Web 控制台、会话组管理、模型/权限切换与 HTTP API。
+
+## 安装
+
+```bash
+dsh plugin --profile desktop add ./dsh-fast-react-1.0.0.tgz
+# 装完重启一次 DSH；之后打开 http://127.0.0.1:19387/fr
+```
+
+- 原理与架构：[docs/技术路线.md](./docs/技术路线.md)
+- 使用与 API：[docs/使用须知.md](./docs/使用须知.md)
+
+---
 # dsh-fast-react
 
 > **快速反应编排插件** —— 让 AI Agent 对突发任务"立刻开干"，而不是先想半天。
@@ -290,3 +305,4 @@ dev_reload_package { packageName: "dsh-fast-react" }
 ## License
 
 [MIT](LICENSE)
+
