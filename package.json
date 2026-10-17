@@ -10,6 +10,7 @@
   "files": [
     "lib",
     "docs",
+    "tools",
     "cordis.patch.yml",
     "README.md",
     "LICENSE"
@@ -49,4 +50,5 @@
   },
   "homepage": "https://github.com/Ewfrewfaf/dsh-fast-react#readme"
 }
+
 
