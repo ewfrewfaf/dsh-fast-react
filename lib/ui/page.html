@@ -290,7 +290,8 @@
       <div class="gm-new">
         <input id="gmTitle" placeholder="标题（可选），例如：桌面整理" maxlength="60" />
         <select id="gmDefaultPerm" title="新建会话组的默认权限（沙箱模式 + 审批策略）"></select>
-        <button id="btnGroupCreate" class="primary">新建会话组</button>
+        <button id="btnGroupCreate" class="primary">新建</button>
+        <button id="btnGroupAdopt" class="ghost" title="把当前已接线的前后台直接收编成一个组（不新建会话）">收编当前</button>
         <button id="btnGroupRepair" class="ghost" title="重建丢失会话 / 纠正编号 / 重新挂到工作区">自愈</button>
       </div>
       <div id="gmList"></div>
@@ -677,6 +678,16 @@
       $('btnGroupCreate').disabled = false
       if (r && r.group) { $('gmTitle').value = ''; toast('新建 ' + r.group.key) }
       load()
+    })
+  }
+  $('btnGroupAdopt').onclick = function(){
+    var t = ($('gmTitle').value || '').trim()
+    $('btnGroupAdopt').disabled = true
+    groupAct({ action: 'create', adopt: true, title: t }, '已收编当前前后台').then(function(r){
+      $('btnGroupAdopt').disabled = false
+      if (r && r.error) return
+      if (r && r.group) { $('gmTitle').value = ''; toast('已收编为 ' + r.group.key) }
+      loadGroups(); load()
     })
   }
   $('btnGroupRepair').onclick = function(){
