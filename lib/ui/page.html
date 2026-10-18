@@ -474,8 +474,14 @@
   function renderHead(d){
     var run = (d.front && d.front.phase==='running') || (d.back && d.back.phase==='running')
     $('live').className = 'dot ' + (run ? 'busy' : 'on')
-    $('fphase').textContent = d.front ? d.front.phase : '未接线'
-    $('bphase').textContent = d.back ? d.back.phase : '未接线'
+    // ★ 接线状态可见（2026-10-18）：未接线 / 自愈中 / 正常 要能一眼区分
+    var w = d.wiring || {}
+    var frontTxt = d.front ? d.front.phase : (w.state === 'healing' ? '自愈中…' : '未接线')
+    var backTxt = d.back ? d.back.phase : (w.state === 'healing' ? '自愈中…' : '未接线')
+    $('fphase').textContent = frontTxt
+    $('bphase').textContent = backTxt
+    if (w.state === 'healing'){ $('live').className = 'dot busy' }
+    else if (w.state === 'unwired' || w.state === 'disabled'){ $('live').className = 'dot' }
     if (d.models && d.models.model){
       $('modelChip').style.display=''
       $('modelTxt').textContent = d.models.model

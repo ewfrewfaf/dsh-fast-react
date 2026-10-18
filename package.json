@@ -1,6 +1,6 @@
 {
   "name": "dsh-fast-react",
-  "version": "1.0.8",
+  "version": "1.2.0",
   "description": "快速反应：前台低档快答快做 + 后台高档逐步规划的双会话编排插件，含独立 Web 控制台与便捷 API",
   "type": "module",
   "main": "./lib/index.js",

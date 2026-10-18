@@ -66,7 +66,7 @@
 ### 方式 A：tgz（推荐，离线可用）
 
 ```bash
-# 1) 下载 Release 里的 dsh-fast-react-1.0.8.tgz
+# 1) 下载 Release 里的 dsh-fast-react-1.0.2.tgz
 # 2) 装进 profile
 dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
 # 3) 重启一次 DSH
