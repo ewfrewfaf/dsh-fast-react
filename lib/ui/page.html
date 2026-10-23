@@ -240,6 +240,12 @@
     #btnModel{max-width:104px}
   }
 
+  #modelMenu .role-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);color:var(--fg2);border-radius:9px;padding:6px 14px;font-size:12.5px;cursor:pointer;min-height:30px;line-height:1}
+  #modelMenu .role-btn:hover{background:rgba(255,255,255,.11);color:var(--fg)}
+  #modelMenu .role-btn.cur{color:#7aaaff;border-color:rgba(122,170,255,.6);background:rgba(122,170,255,.14)}
+  #modelMenu .op{cursor:pointer;min-height:30px}
+  #modelMenu .op[style*="cursor:default"]{cursor:default !important}
+
   /* 权限菜单（与模型菜单同款外观） */
   #permMenu{position:fixed;display:none;z-index:60;min-width:240px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
   #permMenu.show{display:block}
@@ -574,21 +580,41 @@
     if (modelCache) return Promise.resolve(modelCache)
     return api('/models').then(function(m){ modelCache = m; return m }).catch(function(){ return { providers: [], current: {} } })
   }
+  // 常见模型的友好名（原始 id 仍显示在括号里，便于排障）
+  var MODEL_LABELS = {
+    'deepseek-flash': 'DeepSeek V4.1 Flash',
+    'deepseek-v4.1-flash': 'DeepSeek V4.1 Flash',
+    'deepseek-v4-pro': 'DeepSeek V4 Pro',
+    'deepseek-chat': 'DeepSeek Chat',
+    'hy3': '混元 3', 'hy3-preview': '混元 3',
+    'hy4': '混元 4', 'hy4-preview': '混元 4'
+  }
+  function modelLabel(mo){ return MODEL_LABELS[mo] || mo }
   function renderModelMenu(m){
-    var cur = (m.current && m.current.model) || ''
+    var curP = (m.current && m.current.provider) || '', cur = (m.current && m.current.model) || ''
+    var avail = (m.providers || []).filter(function(p){ return (p.models || []).length })
+    var unavail = (m.providers || []).filter(function(p){ return !(p.models || []).length })
     var html = ''
-    ;(m.providers || []).forEach(function(p){
+    avail.forEach(function(p){
       html += '<div class="grp">' + esc(p.provider) + '</div>'
       ;(p.models || []).forEach(function(mo){
-        var isCur = mo === cur
-        html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' + esc(mo) + (isCur ? '<span class="badge">当前</span>' : '') + '</div>'
+        var isCur = (mo === cur && p.provider === curP)
+        var lab = modelLabel(mo)
+        html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' +
+          esc(lab) + (lab !== mo ? '<span class="badge">' + esc(mo) + '</span>' : '') +
+          (isCur ? '<span class="badge">当前</span>' : '') + '</div>'
       })
-      if (!(p.models || []).length) html += '<div class="op" style="color:var(--muted);cursor:default">（无可用模型列表）</div>'
     })
-    // ★ Phase 6：先选"应用到哪个角色"（前台/后台可分开设模型）
-    var roleRow = '<div class="grp">应用到：'
+    if (unavail.length){
+      html += '<div class="grp" style="opacity:.75">不可用（没有模型列表）</div>'
+      unavail.forEach(function(p){
+        html += '<div class="op" style="color:var(--muted);cursor:default;opacity:.8">' + esc(p.provider) + '<span class="badge">不可用</span></div>'
+      })
+    }
+    // 先选"应用到哪个角色"（按钮加大，便于点击）
+    var roleRow = '<div class="grp" style="display:flex;align-items:center;gap:8px">应用到：'
       + [['both','两者'],['front','前台'],['back','后台']].map(function(pair){
-          return '<b data-role="' + pair[0] + '" style="cursor:pointer;margin-right:10px;' + (modelRole===pair[0]?'color:#7aaaff':'') + '">' + pair[1] + '</b>'
+          return '<button class="role-btn' + (modelRole===pair[0]?' cur':'') + '" data-role="' + pair[0] + '">' + pair[1] + '</button>'
         }).join('')
       + '</div>'
     $('modelMenu').innerHTML = roleRow + (html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>')
