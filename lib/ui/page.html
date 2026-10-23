@@ -140,7 +140,7 @@
   #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
   #mask.show{display:block}
   /* 会话组管理弹层 */
-  #groupsModal{position:absolute;top:56px;right:16px;bottom:80px;width:min(560px,92vw);background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
+  #groupsModal{position:absolute;top:56px;right:16px;bottom:80px;width:min(780px,94vw);container-type:inline-size;container-name:gm;background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
   #groupsModal.show{display:flex}
   .gm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
   .gm-hint{font-size:11px;color:var(--muted)}
@@ -276,21 +276,22 @@
     #send{padding:0 10px}
   }
 
-  /* 会话组管理：窄屏重排（按钮不再乱换行） */
-  .gm-new{flex-wrap:wrap}
-  .gm-row{flex-wrap:wrap;row-gap:8px}
-  .gm-row .gm-info{min-width:0}
-  @media (max-width: 560px){
-    .gm-new{gap:6px}
+  /* 会话组管理：按「弹层宽度」重排（容器查询，宽屏一行 / 窄屏两行） */
+  .gm-new{flex-wrap:nowrap}
+  .gm-new #gmTitle{flex:1 1 auto;min-width:120px}
+  .gm-new #gmDefaultPermBtn{flex:0 0 auto;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gm-new > button{flex:0 0 auto;white-space:nowrap}
+  .gm-row{flex-wrap:nowrap}
+  @container gm (max-width: 720px){
+    .gm-new{flex-wrap:wrap;gap:6px}
     .gm-new #gmTitle{flex:1 1 100%}
-    .gm-new #gmDefaultPermBtn{flex:1 1 100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .gm-new > button{flex:1 1 auto;justify-content:center;white-space:nowrap}
-    .gm-row{align-items:center}
-    .gm-row .gm-info{flex:1 1 calc(100% - 64px);order:1}
+    .gm-new #gmDefaultPermBtn{flex:1 1 100%;max-width:none;text-align:center}
+    .gm-new > button{flex:1 1 auto;justify-content:center}
+    .gm-row{flex-wrap:wrap;row-gap:8px}
+    .gm-row .gm-info{flex:1 1 calc(100% - 70px);order:1}
     .gm-row .gm-st{order:2;margin-left:auto}
-    .gm-row .gm-perm{order:3;flex:1 1 auto;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .gm-row .gm-ops{order:4;flex:0 0 auto}
-    .gm-ids{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gm-row .gm-perm{order:3;flex:1 1 auto;max-width:none;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gm-row .gm-ops{order:4}
   }
 </style>
 <script>
