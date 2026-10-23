@@ -368,7 +368,7 @@
   /* 全局报错条（2026-10-24）：页面 JS / API 出错时显示完整信息，便于排障 */
   #errBar{display:none;margin:0 22px 8px;padding:9px 12px;background:rgba(58,29,31,.92);border:1px solid rgba(170,51,51,.7);border-radius:10px;color:#ffd9d9;font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;max-height:24vh;overflow:auto;white-space:pre-wrap;word-break:break-word;flex:0 0 auto}
   #errBar.show{display:block}
-  #errBar b{color:#ff9a9a}
+  #errBar b{color:#ff9a9a;margin-right:8px;display:block}
   #errBar .x{float:right;cursor:pointer;color:#ffb3b3;margin-left:12px}
 </style>
 <script>
@@ -431,8 +431,7 @@
       <div class="empty"><div class="empty-title">随叫随到</div></div>
     </div>
     <!-- 报错条：位于对话区下方、输入框上方 -->
-    <div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b>
-      <span id="errTxt"></span></div>
+    <div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b><span id="errTxt"></span></div>
     <footer>
       <div class="composer">
         <textarea id="input" placeholder="发消息或创建任务..."></textarea>
