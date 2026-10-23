@@ -821,7 +821,26 @@
     }
     var avail = (m.providers || []).filter(function(p){ return (p.models || []).length })
     var unavail = (m.providers || []).filter(function(p){ return !(p.models || []).length })
-    var html = ''
+    // ★ 置顶副本（model-pin-top）：当前选中的模型排在最上面，方便快速确认/切换
+    var pinned = []
+    avail.forEach(function(p){
+      ;(p.models || []).forEach(function(mo){
+        if (isSel(p.provider, mo)) pinned.push({ provider: p.provider, model: mo })
+      })
+    })
+    var pinHtml = ''
+    if (pinned.length){
+      pinHtml = '<div class="grp">当前（置顶）</div>'
+      pinned.forEach(function(it){
+        var lab = modelLabel(it.model)
+        pinHtml += '<div class="op cur" data-p="' + esc(it.provider) + '" data-m="' + esc(it.model) + '">' +
+          '<span style="color:#7aaaff">▲</span>' + esc(lab) +
+          (lab !== it.model ? '<span class="badge">' + esc(it.model) + '</span>' : '') +
+          '<span class="badge">' + esc(it.provider) + '</span></div>'
+      })
+      pinHtml += '<div class="grp" style="opacity:.6">全部模型</div>'
+    }
+    var html = pinHtml
     avail.forEach(function(p){
       html += '<div class="grp">' + esc(p.provider) + '</div>'
       ;(p.models || []).forEach(function(mo){
