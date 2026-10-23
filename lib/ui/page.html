@@ -1134,11 +1134,30 @@
       try { if (window.electron && window.electron.getPathForFile) { var p2 = window.electron.getPathForFile(f); if (p2) return p2 } } catch (e) {}
       return ''
     }
+    // 把"可能是文件名"的输入解析成真实绝对路径（后端在桌面/下载/文档等目录查找）
+    function resolvePath(p){
+      return fetch('/fr/api/resolve-path', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: p }) })
+        .then(function(r){ return r.json() })
+        .then(function(j){ return (j && j.ok && j.path) ? { path: j.path, resolved: !!j.resolved } : { path: p, resolved: false, missing: true } })
+        .catch(function(){ return { path: p, resolved: false, missing: true } })
+    }
+    window.__frResolvePath = resolvePath
     function insert(paths){
       if (!paths.length) return
       var box = document.getElementById('fileChips')
       if (!box) return
-      paths.forEach(function(p){
+      Promise.all(paths.map(resolvePath)).then(function(list){
+        list.forEach(function(item){ addChip(box, item) })
+        box.classList.add('show')
+        box.style.display = 'flex'
+        try { ta.focus() } catch (e) {}
+        var miss = list.filter(function(x){ return x.missing }).length
+        toast('已添加 ' + list.length + ' 个文件' + (miss ? ('（' + miss + ' 个未找到，将按原样发送）') : ''))
+      })
+    }
+    function addChip(box, item){
+      var p = item.path
+      {
         var chip = document.createElement('span')
         chip.className = 'file-chip'
         chip.title = p
@@ -1161,12 +1180,9 @@
         x.onclick = function(e){ e.stopPropagation(); e.preventDefault(); chip.remove(); if (!box.children.length) { box.classList.remove('show'); box.style.display = 'none' } }
         chip.appendChild(ic); chip.appendChild(nm); chip.appendChild(x)
         chip.dataset.path = p
+        if (item.missing) { chip.style.borderColor = 'rgba(255,150,150,.8)'; chip.title = '未找到该文件：' + p }
         box.appendChild(chip)
-      })
-      box.classList.add('show')
-      box.style.display = 'flex'      // ★ 内联兜底：确保真的显示
-      try { ta.focus() } catch (e) {}
-      toast('已添加 ' + paths.length + ' 个文件（蓝色标签，发送时一并带上）')
+      }
     }
     window.__frFilePaths = function(){
       var box = document.getElementById('fileChips'); if (!box) return []
