@@ -133,6 +133,12 @@
   #btnModel .caret,#btnMode .caret{font-size:10px;opacity:.7}
   #modelMenu,#frModeMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
   #modelMenu.show,#frModeMenu.show{display:block}
+  #permQuickMenu{position:absolute;right:56px;bottom:56px;min-width:220px;max-height:300px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #permQuickMenu.show{display:block}
+  #permQuickMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #permQuickMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #permQuickMenu .op:hover{background:rgba(255,255,255,.08)}
+  #permQuickMenu .op.cur{color:#7aaaff}
   #modelMenu .grp,#frModeMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #modelMenu .op,#frModeMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
   #modelMenu .op:hover,#frModeMenu .op:hover{background:rgba(255,255,255,.08)}
@@ -462,11 +468,13 @@
           </label>
           <span class="grow"></span>
           <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
-<button id="btnMode" title="切换任务模式"><span id="frModeLabel">模式</span><span class="caret">▾</span><span id="frModeLockMark" style="font-size:10px;opacity:.8"></span></button>
+<button id="btnPerm" title="设置前后台权限"><span id="permLabel">权限</span><span class="caret">▾</span></button>
+          <button id="btnMode" title="切换任务模式"><span id="frModeLabel">模式</span><span class="caret">▾</span><span id="frModeLockMark" style="font-size:10px;opacity:.8"></span></button>
           <button id="send" class="send" title="发送 (Enter)">↑</button>
         </div>
         <div id="modelMenu"></div>
         <div id="frModeMenu"></div>
+        <div id="permQuickMenu"></div>
       </div>
     </footer>
 
@@ -1234,6 +1242,56 @@
     // 兜底：整页阻止默认打开文件，避免拖歪时浏览器直接跳转
     window.addEventListener('dragover', function(e){ e.preventDefault() })
     window.addEventListener('drop', function(e){ if (!e.target || !e.target.closest || !e.target.closest('.composer')) e.preventDefault() })
+  })();
+
+  // ── 权限快捷切换（输入栏「权限 ▾」）──────────────────────────────
+  ;(function initPermMenu(){
+    var btn = document.getElementById('btnPerm')
+    var menu = document.getElementById('permQuickMenu')
+    var label = document.getElementById('permLabel')
+    if (!btn || !menu) return
+    window.__frPermMenuInit = 1
+    var PERMS = [['read-only','只读'],['workspace-write','工作区可写'],['danger-full-access','完全权限'],['','跟随 DSH']]
+    var cur = '', open = false
+    function render(){
+      var h = '<div class="grp">前后台权限</div>'
+      PERMS.forEach(function(p){
+        h += '<div class="op' + (p[0] === cur ? ' cur' : '') + '" data-p="' + p[0] + '">' + p[1] + (p[0] === cur ? '<span class="badge" style="margin-left:auto;font-size:10.5px;color:var(--muted)">当前</span>' : '') + '</div>'
+      })
+      menu.innerHTML = h
+      var hit = PERMS.filter(function(p){ return p[0] === cur })[0]
+      label.textContent = hit ? hit[1] : '权限'
+      btn.title = '前后台权限：' + (hit ? hit[1] : cur || '未知')
+    }
+    function toggle(f){ open = typeof f === 'boolean' ? f : !open; menu.classList[open ? 'add' : 'remove']('show'); if (open) refresh() }
+    btn.onclick = function(e){ e.stopPropagation(); toggle() }
+    menu.onclick = function(e){
+      var op = e.target && e.target.closest ? e.target.closest('.op') : null
+      if (!op) return
+      var preset = op.getAttribute('data-p') || ''
+      // 通过 groups/policy 应用到当前活跃组；没有组则写全局默认
+      fetch('/fr/api/groups').then(function(r){ return r.json() }).then(function(j){
+        var active = (j.groups || []).filter(function(g){ return g.active })[0]
+        if (active) {
+          return fetch('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: active.key, preset: preset }) })
+        }
+        return fetch('/fr/api/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ permissionPreset: preset }) })
+      }).then(function(){ toast('权限已设为 ' + (preset || '跟随 DSH')); toggle(false); load() })
+        .catch(function(){ toast('设置权限失败', true) })
+    }
+    document.addEventListener('click', function(e){
+      var t = e.target; if (!t || !t.closest) return
+      if (open && !t.closest('#permQuickMenu') && !t.closest('#btnPerm')) toggle(false)
+    })
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && open) toggle(false) })
+    function refresh(){
+      fetch('/fr/api/status').then(function(r){ return r.json() }).then(function(j){
+        var p = j.permissions || {}
+        cur = p.front || p.default || ''
+        render()
+      }).catch(function(){})
+    }
+    refresh(); setInterval(refresh, 15000)
   })();
 
   // ── T3 待批准卡片（每 2 秒拉一次）────────────────────────────────────
