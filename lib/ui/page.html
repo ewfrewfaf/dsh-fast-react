@@ -1368,7 +1368,7 @@
 <script>
 // 模式选择器（2026-10-24：与「切换模型」同款按钮 + 弹出菜单；悬停 0.6s 显示简介）
 (function(){
-var fallback={quick:["速答","不编排：前台直接答，最多查一眼"],consult:["咨询","深度分析：后台可查资料，只产出 analysis.md，不写步骤"],retrieval:["检索","长检索：前台自己并行查，不惊动后台"],coding:["编码","标准编排：后台写路线+步骤，前台执行"],refactor:["重构","大改动/结构重组：步长小、复核密"],batchwork:["批量","大量重复小步：批量投递大、复核稀"],ops:["巡检","运维检查：只读为主、T3 最严"],review:["审查","只读审查：绝不写，只出报告"],explore:["探索","试错型：允许失败，重过程"],compare:["多源对比","检索型加强：强制并行多源"],research:["深调研","长检索+深度分析：后台参与给结论"],deliver:["长交付","多步交付物：默认编排的加强版"]};
+var fallback={quick:["速答","不编排：前台直接答，最多查一眼"],consult:["咨询","深度分析：后台可查资料，只产出 analysis.md，不写步骤"],retrieval:["检索","长检索：前台自己并行查，不惊动后台"],coding:["编码","标准编排：后台写路线+步骤，前台执行"]};
 var btn=document.getElementById("btnMode"),menu=document.getElementById("frModeMenu"),label=document.getElementById("frModeLabel"),mark=document.getElementById("frModeLockMark");
 if(!btn||!menu)return;
 var info={},cur="",locked=false,open=false,hoverTimer=null;
