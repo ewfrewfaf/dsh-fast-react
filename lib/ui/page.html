@@ -241,6 +241,7 @@
     <span class="chips">
       <span class="chip">前台 <b id="fphase">—</b></span>
       <span class="chip">后台 <b id="bphase">—</b></span>
+      <span class="chip" id="modeChip" style="display:none" title="点击循环切换任务模式">模式 <b id="modeTxt">—</b></span>
       <span class="chip" id="modelChip" style="display:none">模型 <b id="modelTxt">—</b></span>
       <span class="chip" id="permChip" style="display:none">权限 <b id="permTxt">—</b></span>
     </span>
@@ -484,8 +485,17 @@
     else if (w.state === 'unwired' || w.state === 'disabled'){ $('live').className = 'dot' }
     if (d.models && d.models.model){
       $('modelChip').style.display=''
-      $('modelTxt').textContent = d.models.model
-      $('modelLabel').textContent = d.models.model            // 输入栏右下模型切换器标签
+      // ★ Phase 6：前后台模型可能不同 ⇒ 有分开配置时并列显示
+      var fm = (d.models.front && d.models.front.model) || d.models.model
+      var bm = (d.models.back && d.models.back.model) || d.models.model
+      $('modelTxt').textContent = (fm === bm) ? fm : ('前台 ' + fm + ' / 后台 ' + bm)
+      $('modelLabel').textContent = fm                          // 输入栏右下模型切换器标签
+    }
+    // ★ Phase 1：模式 chip（点击循环切换；锁定状态加 🔒）
+    if (d.mode && d.mode.mode){
+      $('modeChip').style.display=''
+      $('modeTxt').textContent = (d.mode.label || d.mode.mode) + (d.mode.locked ? ' 🔒' : '')
+      $('btnMode') && ($('btnMode').textContent = d.mode.label || d.mode.mode)
     }
     if (d.permissions && (d.permissions.front || d.permissions.back)){
       $('permChip').style.display=''
@@ -495,7 +505,7 @@
   }
 
   // ── 模型切换（DSH 同位置：输入栏右下、发送键左侧）────────────────────────
-  var modelCache = null, modelOpen = false
+  var modelCache = null, modelOpen = false, modelRole = 'both'
   function loadModels(){
     if (modelCache) return Promise.resolve(modelCache)
     return api('/models').then(function(m){ modelCache = m; return m }).catch(function(){ return { providers: [], current: {} } })
@@ -511,7 +521,13 @@
       })
       if (!(p.models || []).length) html += '<div class="op" style="color:var(--muted);cursor:default">（无可用模型列表）</div>'
     })
-    $('modelMenu').innerHTML = html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>'
+    // ★ Phase 6：先选"应用到哪个角色"（前台/后台可分开设模型）
+    var roleRow = '<div class="grp">应用到：'
+      + [['both','两者'],['front','前台'],['back','后台']].map(function(pair){
+          return '<b data-role="' + pair[0] + '" style="cursor:pointer;margin-right:10px;' + (modelRole===pair[0]?'color:#7aaaff':'') + '">' + pair[1] + '</b>'
+        }).join('')
+      + '</div>'
+    $('modelMenu').innerHTML = roleRow + (html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>')
   }
   function toggleModelMenu(force){
     var open = typeof force === 'boolean' ? force : !modelOpen
@@ -522,15 +538,49 @@
   }
   $('btnModel').onclick = function(e){ e.stopPropagation(); toggleModelMenu() }
   $('modelMenu').onclick = function(e){
+    // 角色选择（前台/后台/两者）
+    var roleEl = e.target && e.target.closest ? e.target.closest('[data-role]') : null
+    if (roleEl && roleEl.dataset.role){
+      e.stopPropagation()
+      modelRole = roleEl.dataset.role
+      renderModelMenu(modelCache || { providers: [], current: {} })
+      return
+    }
     var op = e.target && e.target.closest ? e.target.closest('.op') : null
     if (!op || !op.dataset.m) return
     var p = op.dataset.p, m = op.dataset.m
     toggleModelMenu(false)
-    api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m }) })
-      .then(function(){ modelCache = null; toast('模型已切换：' + p + '/' + m); load() })
+    api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m, role: modelRole }) })
+      .then(function(){ modelCache = null; toast('模型已切换（' + (modelRole === 'both' ? '前后台' : modelRole === 'front' ? '前台' : '后台') + '）：' + p + '/' + m); load() })
       .catch(function(err){ toast('切换失败：' + err.message, true) })
   }
   document.addEventListener('click', function(){ if (modelOpen) toggleModelMenu(false) })
+
+  // ★ Phase 1/6：模式 chip —— 点击循环切换 速答→咨询→检索→编码
+  var MODE_ORDER = ['quick', 'consult', 'retrieval', 'coding']
+  $('modeChip').onclick = function(e){
+    e.stopPropagation()
+    api('/mode').then(function(j){
+      var cur = (j && j.mode && j.mode.mode) || 'coding'
+      var idx = MODE_ORDER.indexOf(cur)
+      var next = MODE_ORDER[(idx < 0 ? 0 : idx + 1) % MODE_ORDER.length]
+      return api('/mode', { method: 'POST', body: JSON.stringify({ mode: next }) })
+    }).then(function(){ toast('模式已切换'); load() }).catch(function(err){ toast('模式切换失败：' + err.message, true) })
+  }
+
+  // ★ Phase 6：点空白关闭（抽屉/会话组/模型菜单）+ ESC
+  document.addEventListener('click', function(e){
+    var t = e.target
+    if (!t || !t.closest) return
+    try {
+      if ($('drawer').classList.contains('open') && !t.closest('#drawer') && !t.closest('#btnDrawer')) drawer(false)
+      if ($('groupsModal').classList.contains('show') && !t.closest('#groupsModal') && !t.closest('#btnGroups')) groupsOpen(false)
+    } catch (err) { /* 忽略 */ }
+  })
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return
+    try { toggleModelMenu(false); drawer(false); groupsOpen(false) } catch (err) { /* 忽略 */ }
+  })
 
   function load(){
     api('/status').then(function(d){
