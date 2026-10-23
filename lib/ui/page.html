@@ -140,7 +140,7 @@
   #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
   #mask.show{display:block}
   /* 会话组管理弹层 */
-  #groupsModal{position:absolute;top:56px;right:16px;bottom:80px;width:min(780px,94vw);container-type:inline-size;container-name:gm;background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
+  #groupsModal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(780px,94vw);max-height:min(76vh,720px);container-type:inline-size;container-name:gm;background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
   #groupsModal.show{display:flex}
   .gm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
   .gm-hint{font-size:11px;color:var(--muted)}
@@ -148,10 +148,10 @@
   .gm-new input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:var(--fg);padding:7px 11px;font-size:13px;outline:none}
   .gm-new input:focus{border-color:rgba(122,170,255,.55)}
   #gmList{flex:1 1 auto;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
-  .gm-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)}
+  .gm-row{display:flex;align-items:center;min-width:0;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)}
   .gm-row.active{border-color:rgba(122,170,255,.5);background:rgba(122,170,255,.08)}
   .gm-key{font:12px/1 var(--mono);color:#7aaaff;background:rgba(122,170,255,.12);border:1px solid rgba(122,170,255,.3);border-radius:7px;padding:5px 8px;flex:0 0 auto}
-  .gm-info{flex:1;min-width:0}
+  .gm-info{flex:1 1 auto;min-width:0;overflow:hidden}
   .gm-title{font-size:13px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gm-ids{font:10.5px/1.5 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gm-st{display:flex;gap:6px;flex:0 0 auto}
@@ -160,7 +160,7 @@
   .gm-dot.miss{color:#e06c75;border-color:rgba(224,108,117,.4);background:rgba(224,108,117,.08)}
   .gm-ops{display:flex;gap:6px;flex:0 0 auto}
   .gm-ops button{padding:4px 10px;font-size:12px;border-radius:8px}
-  .gm-perm{flex:0 0 auto;max-width:136px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg2);font-size:11.5px;padding:4px 6px;outline:none}
+  .gm-perm{flex:0 0 auto;max-width:168px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg2);font-size:11.5px;padding:4px 8px;outline:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
   .gm-perm:focus{border-color:rgba(122,170,255,.55);color:var(--fg)}
   .gm-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted)}
   .gm-empty{padding:24px 10px;text-align:center;color:var(--muted);font-size:12.5px}
@@ -252,7 +252,7 @@
   #permMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #permMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
   #permMenu .op:hover{background:rgba(255,255,255,.08)}
-  .gm-perm.perm-btn{cursor:pointer;text-align:left;font:12px system-ui;color:var(--fg);padding:4px 8px;border-radius:8px}
+  .gm-perm.perm-btn{cursor:pointer;text-align:left;font:12px system-ui;color:var(--fg);padding:4px 8px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
 
   /* 模型 chip 窄屏：保留但省略（title 里是完整前后台） */
   @media (max-width: 560px){ #modelChip{max-width:100%;overflow:hidden;text-overflow:ellipsis} #modelTxt{display:inline-block;max-width:180px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom} }
