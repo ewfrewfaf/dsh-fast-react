@@ -135,6 +135,12 @@
   #modelMenu.show,#frModeMenu.show{display:block}
   #permQuickMenu{position:absolute;right:56px;bottom:56px;min-width:220px;max-height:300px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
   #permQuickMenu.show{display:block}
+  /* 三个下拉菜单统一细滚动条（与聊天区一致，避免突兀系统粗条） */
+  #modelMenu::-webkit-scrollbar,#frModeMenu::-webkit-scrollbar,#permQuickMenu::-webkit-scrollbar{width:8px}
+  #modelMenu::-webkit-scrollbar-track,#frModeMenu::-webkit-scrollbar-track,#permQuickMenu::-webkit-scrollbar-track{background:transparent}
+  #modelMenu::-webkit-scrollbar-thumb,#frModeMenu::-webkit-scrollbar-thumb,#permQuickMenu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:5px;border:2px solid transparent;background-clip:content-box}
+  #modelMenu:hover::-webkit-scrollbar-thumb,#frModeMenu:hover::-webkit-scrollbar-thumb,#permQuickMenu:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.24);background-clip:content-box}
+  #modelMenu,#frModeMenu,#permQuickMenu{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
   #permQuickMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #permQuickMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
   #permQuickMenu .op:hover{background:rgba(255,255,255,.08)}
@@ -834,11 +840,20 @@
   }
   function toggleModelMenu(force){
     var open = typeof force === 'boolean' ? force : !modelOpen
+    if (open && window.__frCloseOtherMenus) window.__frCloseOtherMenus('model')
     modelOpen = open
     if (open){
       loadModels().then(function(m){ renderModelMenu(m); $('modelMenu').classList.add('show') })
     } else $('modelMenu').classList.remove('show')
   }
+  document.addEventListener('fr:menu-others-open', function(ev){
+    if (ev && ev.detail && ev.detail.keep === 'model') return
+    if (modelOpen) { modelOpen = false; try { $('modelMenu').classList.remove('show') } catch (e) {} }
+  })
+  document.addEventListener('fr:menu-others-open', function(ev){
+    if (ev && ev.detail && ev.detail.keep === 'model') return
+    if (modelOpen) { modelOpen = false; try { $('modelMenu').classList.remove('show') } catch (e) {} }
+  })
   $('btnModel').onclick = function(e){ e.stopPropagation(); toggleModelMenu() }
   $('modelMenu').onclick = function(e){
     // 角色选择（前台/后台/两者）
@@ -1263,7 +1278,15 @@
       label.textContent = hit ? hit[1] : '权限'
       btn.title = '前后台权限：' + (hit ? hit[1] : cur || '未知')
     }
-    function toggle(f){ open = typeof f === 'boolean' ? f : !open; menu.classList[open ? 'add' : 'remove']('show'); if (open) refresh() }
+    function toggle(f){ open = typeof f === 'boolean' ? f : !open; if (open && window.__frCloseOtherMenus) window.__frCloseOtherMenus('perm'); menu.classList[open ? 'add' : 'remove']('show'); if (open) refresh() }
+    document.addEventListener('fr:menu-others-open', function(ev){
+      if (ev && ev.detail && ev.detail.keep === 'perm') return
+      if (open) { open = false; try { menu.classList.remove('show') } catch (e) {} }
+    })
+    document.addEventListener('fr:menu-others-open', function(ev){
+      if (ev && ev.detail && ev.detail.keep === 'perm') return
+      if (open) { open = false; try { menu.classList.remove('show') } catch (e) {} }
+    })
     btn.onclick = function(e){ e.stopPropagation(); toggle() }
     menu.onclick = function(e){
       var op = e.target && e.target.closest ? e.target.closest('.op') : null
@@ -1293,6 +1316,11 @@
     }
     refresh(); setInterval(refresh, 15000)
   })();
+
+  // ── 三个下拉菜单互斥：打开一个就广播让其它关掉自己 ────────────────
+  window.__frCloseOtherMenus = function(keep){
+    try { document.dispatchEvent(new CustomEvent('fr:menu-others-open', { detail: { keep: keep } })) } catch (e) {}
+  }
 
   // ── T3 待批准卡片（每 2 秒拉一次）────────────────────────────────────
   function renderT3(){
@@ -1359,7 +1387,9 @@ function armTip(e){
   if(!op)return;
   hoverTimer=setTimeout(function(){showTip(op)},600);
 }
-function toggle(f){open=typeof f==="boolean"?f:!open;menu.classList[open?"add":"remove"]("show");if(open)render();else{clearTimeout(hoverTimer);hideTip()}}
+function toggle(f){open=typeof f==="boolean"?f:!open;if(open&&window.__frCloseOtherMenus)window.__frCloseOtherMenus("mode");menu.classList[open?"add":"remove"]("show");if(open)render();else{clearTimeout(hoverTimer);hideTip()}}
+document.addEventListener("fr:menu-others-open",function(ev){if(ev&&ev.detail&&ev.detail.keep==="mode")return;if(open){open=false;menu.classList.remove("show");clearTimeout(hoverTimer);hideTip()}});
+document.addEventListener("fr:menu-others-open",function(ev){if(ev&&ev.detail&&ev.detail.keep==="mode")return;if(open){open=false;menu.classList.remove("show");clearTimeout(hoverTimer);hideTip()}});
 btn.onclick=function(e){e.stopPropagation();toggle()};
 menu.addEventListener("mouseover",armTip);
 menu.addEventListener("mouseout",function(){clearTimeout(hoverTimer);hideTip()});
