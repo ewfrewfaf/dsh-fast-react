@@ -446,6 +446,8 @@
     </div>
     <!-- 报错条：位于对话区下方、输入框上方 -->
     <div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b><span id="errTxt"></span></div>
+    <!-- T3 破坏性操作审批卡（用户可见） -->
+    <div id="t3Box" style="display:none;margin:0 22px 8px"></div>
     <footer>
       <div class="composer">
         <div id="fileChips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:7px;align-items:center"></div>
@@ -1234,6 +1236,32 @@
     window.addEventListener('drop', function(e){ if (!e.target || !e.target.closest || !e.target.closest('.composer')) e.preventDefault() })
   })();
 
+  // ── T3 待批准卡片（每 2 秒拉一次）────────────────────────────────────
+  function renderT3(){
+    fetch('/fr/api/confirm', { cache: 'no-store' }).then(function(r){ return r.json() }).then(function(j){
+      var box = document.getElementById('t3Box'); if (!box) return
+      var list = (j && j.pending) || []
+      if (!list.length){ box.style.display = 'none'; box.innerHTML = ''; return }
+      box.style.display = 'block'
+      box.innerHTML = list.map(function(it){
+        return '<div style="padding:10px 12px;background:rgba(200,140,40,.12);border:1px solid rgba(230,170,60,.6);border-radius:10px;color:#f0d090;font:12px/1.6 ui-monospace,Consolas,monospace">' +
+          '<div style="font-weight:600;margin-bottom:6px;color:#ffd88a">⚠ 需要你批准的危险操作（' + it.id + '）</div>' +
+          '<div style="white-space:pre-wrap;word-break:break-all;max-height:120px;overflow:auto;margin-bottom:8px">' + esc(it.cmd) + '</div>' +
+          '<div style="display:flex;gap:8px">' +
+          '<button data-t3="ok" data-step="' + esc(it.id) + '" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(120,220,120,.6);background:rgba(60,180,80,.2);color:#9df0a9;cursor:pointer;font-size:12px">允许执行</button>' +
+          '<button data-t3="no" data-step="' + esc(it.id) + '" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(220,120,120,.6);background:rgba(180,60,60,.2);color:#ffb3b3;cursor:pointer;font-size:12px">拒绝</button>' +
+          '</div></div>'
+      }).join('')
+    }).catch(function(){})
+  }
+  document.addEventListener('click', function(e){
+    var t = e.target; if (!t || !t.dataset || !t.dataset.t3) return
+    var step = t.dataset.step, action = t.dataset.t3 === 'ok' ? 'approve' : 'reject'
+    fetch('/fr/api/confirm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: action, step: step }) })
+      .then(function(){ toast(action === 'approve' ? '已批准，前台可继续' : '已拒绝'); renderT3(); load() })
+      .catch(function(){ toast('操作失败', true) })
+  })
+  renderT3(); setInterval(renderT3, 2000)
   load().then(nextPoll, nextPoll)
 })();
 </script>
