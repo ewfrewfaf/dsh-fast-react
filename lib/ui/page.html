@@ -671,8 +671,10 @@
     var p = op.dataset.p, m = op.dataset.m
     api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m, role: modelRole }) })
       .then(function(){
-        // 立即记住本角色的选择 → 高亮马上跟上
-        modelSel[modelRole] = { provider: p, model: m }
+        // 立即记住选择 → 高亮马上跟上；「两者」要同时刷新三个槽位，否则旧模型的蓝色会残留
+        var selNow = { provider: p, model: m }
+        if (modelRole === 'both') { modelSel.both = selNow; modelSel.front = selNow; modelSel.back = selNow }
+        else modelSel[modelRole] = selNow
         toast('模型已切换（' + (modelRole === 'both' ? '前后台' : modelRole === 'front' ? '前台' : '后台') + '）：' + p + '/' + m)
         renderModelMenu(modelCache || { providers: [], current: {} })
         load()   // 异步刷新真实状态（以 /status 为准）
