@@ -241,6 +241,25 @@
     #btnMode{margin-left:auto}
     #btnModel{max-width:104px}
   }
+
+  /* ── 窄屏：模式/模型按钮折叠为小按钮（保持单行，不再换行错位）────────── */
+  @media (max-width: 560px){
+    .composer .bar{flex-wrap:nowrap !important;gap:4px}
+    .composer .bar .grow{display:block;flex:1 1 0;min-width:0}
+    #btnMode{flex:0 1 auto;min-width:0;max-width:88px;padding:0 4px;gap:3px}
+    #btnModel{flex:0 1 auto;min-width:0;max-width:104px;padding:0 4px;gap:3px}
+    #frModeLabel,#modelLabel{max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+    #frModeLockMark{display:none}
+    .composer .bar .switch{padding:0}
+  }
+  @media (max-width: 440px){
+    /* 极窄：文字全收起，只剩 ▾ 小按钮（悬停 title 显示当前模式/模型） */
+    .composer .bar{flex-wrap:nowrap !important}
+    #btnModel,#btnMode{max-width:34px;min-width:26px;padding:0 4px;justify-content:center}
+    #frModeLabel,#modelLabel{display:none}
+    #btnModel .caret,#btnMode .caret{font-size:11px;opacity:.85}
+    #send{padding:0 10px}
+  }
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
