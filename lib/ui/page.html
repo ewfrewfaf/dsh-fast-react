@@ -124,16 +124,16 @@
   .composer .pill{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--fg2);border-radius:999px;padding:6px 14px;font-size:12.5px}
   .composer .pill:hover{background:rgba(255,255,255,.06);color:var(--fg);border-color:rgba(255,255,255,.22)}
   /* 模型切换器：DSH 同位置（输入栏右下、发送键左侧），透明底 8px 圆角 28px 高 */
-  #btnModel{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #btnModel:hover{background:rgba(255,255,255,.07);color:var(--fg)}
-  #btnModel .caret{font-size:10px;opacity:.7}
-  #modelMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
-  #modelMenu.show{display:block}
-  #modelMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
-  #modelMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
-  #modelMenu .op:hover{background:rgba(255,255,255,.08)}
-  #modelMenu .op.cur{color:#7aaaff}
-  #modelMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
+  #btnModel,#btnMode{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #btnModel:hover,#btnMode:hover{background:rgba(255,255,255,.07);color:var(--fg)}
+  #btnModel .caret,#btnMode .caret{font-size:10px;opacity:.7}
+  #modelMenu,#frModeMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #modelMenu.show,#frModeMenu.show{display:block}
+  #modelMenu .grp,#frModeMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #modelMenu .op,#frModeMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #modelMenu .op:hover,#frModeMenu .op:hover{background:rgba(255,255,255,.08)}
+  #modelMenu .op.cur,#frModeMenu .op.cur{color:#7aaaff}
+  #modelMenu .op .badge,#frModeMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
   .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s}
   .send:hover:not(:disabled){filter:brightness(1.12)}
   .send:disabled{opacity:.4;cursor:not-allowed}
@@ -273,11 +273,11 @@
           </label>
           <span class="grow"></span>
           <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
-<select id="frModeSel" title="任务模式" style="height:26px;max-width:104px;background:transparent;border:0;color:var(--fg);font:12px system-ui;cursor:pointer;outline:none;margin-right:2px"></select>
-<button id="frModeLockBtn" title="锁定模式（禁止自动判型）" style="height:26px;padding:0 5px;background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:12px">🔓</button>
+<button id="btnMode" title="切换任务模式"><span id="frModeLabel">模式</span><span class="caret">▾</span><span id="frModeLockMark" style="font-size:10px;opacity:.8"></span></button>
           <button id="send" class="send" title="发送 (Enter)">↑</button>
         </div>
         <div id="modelMenu"></div>
+        <div id="frModeMenu"></div>
       </div>
     </footer>
 
@@ -824,17 +824,33 @@
 })();
 </script>
 <script>
-// 模式选择器（2026-10-24 从右下角浮层移到输入栏，避免遮挡内容）
+// 模式选择器（2026-10-24：与「切换模型」同款按钮 + 弹出菜单）
 (function(){
 var N={quick:"速答",consult:"咨询",retrieval:"检索",coding:"编码",refactor:"重构",batchwork:"批量",ops:"巡检",review:"审查",explore:"探索",compare:"多源对比",research:"深调研",deliver:"长交付"};
-var sel=document.getElementById("frModeSel"),lockBtn=document.getElementById("frModeLockBtn");
-if(!sel||!lockBtn)return;
-var locked=false;
+var btn=document.getElementById("btnMode"),menu=document.getElementById("frModeMenu"),label=document.getElementById("frModeLabel"),mark=document.getElementById("frModeLockMark");
+if(!btn||!menu)return;
+var cur="",locked=false,open=false;
 function api(p,o){return fetch(p,o).then(function(r){return r.json()})}
-function paintLock(){lockBtn.textContent=locked?"🔒":"🔓";lockBtn.style.color=locked?"#e0b341":"var(--muted)"}
-function refresh(){api("/fr/api/mode").then(function(j){var m=j&&j.mode;var h="";for(var k in N){h+='<option value="'+k+'"'+(k===m?" selected":"")+'>'+N[k]+'</option>'}sel.innerHTML=h;locked=!!(j&&j.locked);paintLock()})}
-sel.onchange=function(){api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:sel.value})}).then(function(){refresh();try{load()}catch(e){}})};
-lockBtn.onclick=function(){locked=!locked;paintLock();api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locked:locked})}).then(function(){try{load()}catch(e){}})};
+function render(){
+  var h='<div class="grp">任务模式</div>';
+  for(var k in N){h+='<div class="op'+(k===cur?" cur":"")+'" data-k="'+k+'">'+N[k]+'<span class="badge">'+k+'</span></div>'}
+  h+='<div class="grp">锁定（禁止自动判型）</div><div class="op" data-lock="1">'+(locked?"🔒 已锁定（点击解锁）":"🔓 未锁定（点击锁定）")+'</div>';
+  menu.innerHTML=h;
+  label.textContent=N[cur]||"模式";
+  mark.textContent=locked?"🔒":"";
+}
+function toggle(f){open=typeof f==="boolean"?f:!open;menu.classList[open?"add":"remove"]("show");if(open)render()}
+btn.onclick=function(e){e.stopPropagation();toggle()};
+menu.onclick=function(e){
+  var op=e.target&&e.target.closest?e.target.closest(".op"):null;
+  if(!op)return;
+  if(op.dataset.lock){locked=!locked;api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locked:locked})}).then(function(){render();try{load()}catch(_){}});return}
+  if(!op.dataset.k)return;
+  api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:op.dataset.k})}).then(function(){cur=op.dataset.k;render();toggle(false);try{load()}catch(_){}});
+};
+document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;if(open&&!t.closest("#frModeMenu")&&!t.closest("#btnMode"))toggle(false)});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&open)toggle(false)});
+function refresh(){api("/fr/api/mode").then(function(j){cur=(j&&j.mode)||"coding";locked=!!(j&&j.locked);render()})}
 refresh();setInterval(refresh,15000);
 })();
 </script>
