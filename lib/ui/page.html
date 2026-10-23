@@ -303,6 +303,44 @@
     .gm-row .gm-perm{order:3;flex:1 1 auto;max-width:none;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .gm-row .gm-ops{order:4}
   }
+
+  /* ── 技术面板 UI 优化（2026-10-24）────────────────────────────────── */
+  #drawer .dh{padding:12px 16px;background:rgba(255,255,255,.02)}
+  #drawer .dh b{font-size:13.5px;letter-spacing:.3px}
+  #drawer .db{padding:14px 16px 20px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+  #drawer .db:hover{scrollbar-color:rgba(255,255,255,.28) transparent}
+  #drawer .db::-webkit-scrollbar{width:9px}
+  #drawer .db::-webkit-scrollbar-track{background:transparent}
+  #drawer .db::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  #drawer .db:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
+  /* 区块标题：小号灰色标签，右对齐一条细线 */
+  #drawer .db h4{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+  #drawer .db h4::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.07)}
+  #drawer .db .sep{display:none}          /* 用 h4 的下划线取代独立分隔线，减噪 */
+  #drawer .db h4{margin-top:16px}
+  #drawer .db > h4:first-child{margin-top:0}
+  /* 键值行 */
+  .kv{gap:6px 12px;font-size:12.5px;line-height:1.6}
+  .kv .k{color:var(--muted)}
+  /* 步骤 chip */
+  .steps .st,.steps span{font-size:11.5px}
+  /* 事件流 */
+  #events{font-size:11.5px;line-height:1.75;max-height:220px;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+  #events::-webkit-scrollbar{width:8px}
+  #events::-webkit-scrollbar-track{background:transparent}
+  #events::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:5px;border:2px solid transparent;background-clip:content-box}
+  /* 操作按钮统一胶囊 */
+  #drawer .db button{border-radius:9px;padding:6px 13px;font-size:12.5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--fg2);cursor:pointer;transition:.15s}
+  #drawer .db button:hover{background:rgba(255,255,255,.11);color:var(--fg)}
+  #drawer .cfgrow{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;margin-top:12px}
+  #drawer .cfgrow input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg);padding:5px 9px;font-size:12.5px;width:100%;min-width:0}
+  @media (max-width: 440px){
+    #drawer{width:100%}
+    #drawer .db{padding:12px 12px 16px}
+    #drawer .db h4{font-size:10.5px}
+    .kv{font-size:12px}
+    #events{max-height:160px}
+  }
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
