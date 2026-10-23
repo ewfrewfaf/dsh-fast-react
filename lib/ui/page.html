@@ -624,17 +624,6 @@
   }
   document.addEventListener('click', function(){ if (modelOpen) toggleModelMenu(false) })
 
-  // ★ Phase 1/6：模式 chip —— 点击循环切换 速答→咨询→检索→编码
-  var MODE_ORDER = ['quick', 'consult', 'retrieval', 'coding']
-  $('modeChip').onclick = function(e){
-    e.stopPropagation()
-    api('/mode').then(function(j){
-      var cur = (j && j.mode && j.mode.mode) || 'coding'
-      var idx = MODE_ORDER.indexOf(cur)
-      var next = MODE_ORDER[(idx < 0 ? 0 : idx + 1) % MODE_ORDER.length]
-      return api('/mode', { method: 'POST', body: JSON.stringify({ mode: next }) })
-    }).then(function(){ toast('模式已切换'); load() }).catch(function(err){ toast('模式切换失败：' + err.message, true) })
-  }
 
   // ★ Phase 6：点空白关闭（抽屉/会话组/模型菜单）+ ESC
   document.addEventListener('click', function(e){
