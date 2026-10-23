@@ -856,7 +856,12 @@
       .then(function(r){ toast(okMsg); loadGroups(); return r })
       .catch(function(e){ toast('失败：' + e.message, true) })
   }
-  $('btnGroups').onclick = function(){ groupsOpen(true); loadGroups() }
+  $('btnGroups').onclick = function(e){
+    if (e && e.stopPropagation) e.stopPropagation()
+    var open = $('groupsModal').classList.contains('show')
+    if (open) { groupsOpen(false); return }   // 已打开 ⇒ 再点一次就关闭
+    groupsOpen(true); loadGroups()
+  }
   $('btnGroupsClose').onclick = function(){ groupsOpen(false) }
   $('btnGroupCreate').onclick = function(){
     var t = ($('gmTitle').value || '').trim()
