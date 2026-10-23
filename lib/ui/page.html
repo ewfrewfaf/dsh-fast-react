@@ -128,9 +128,9 @@
   .composer .pill{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--fg2);border-radius:999px;padding:6px 14px;font-size:12.5px}
   .composer .pill:hover{background:rgba(255,255,255,.06);color:var(--fg);border-color:rgba(255,255,255,.22)}
   /* 模型切换器：DSH 同位置（输入栏右下、发送键左侧），透明底 8px 圆角 28px 高 */
-  #btnModel,#btnMode{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #btnModel:hover,#btnMode:hover{background:rgba(255,255,255,.07);color:var(--fg)}
-  #btnModel .caret,#btnMode .caret{font-size:10px;opacity:.7}
+  #btnModel,#btnMode,#btnPerm{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #btnModel:hover,#btnMode:hover,#btnPerm:hover{background:rgba(255,255,255,.07);color:var(--fg)}
+  #btnModel .caret,#btnMode .caret,#btnPerm .caret{font-size:10px;opacity:.7}
   #modelMenu,#frModeMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
   #modelMenu.show,#frModeMenu.show{display:block}
   #permQuickMenu{position:absolute;right:56px;bottom:56px;min-width:220px;max-height:300px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
@@ -223,7 +223,7 @@
     .composer{padding:12px 13px 8px;border-radius:22px}
     .composer .bar{gap:5px;flex-wrap:nowrap;overflow:hidden}
     .composer .bar .hint{display:none}
-    #btnModel,#btnMode{max-width:92px;padding:0 6px;font-size:12px}
+    #btnModel,#btnMode,#btnPerm{max-width:92px;padding:0 6px;font-size:12px}
     #modelLabel,#frModeLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   }
   @media (max-width: 440px){
@@ -280,16 +280,16 @@
     .composer .bar .grow{display:block;flex:1 1 0;min-width:0}
     #btnMode{flex:0 1 auto;min-width:0;max-width:88px;padding:0 4px;gap:3px}
     #btnModel{flex:0 1 auto;min-width:0;max-width:104px;padding:0 4px;gap:3px}
-    #frModeLabel,#modelLabel{max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+    #frModeLabel,#modelLabel,#permLabel{max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
     #frModeLockMark{display:none}
     .composer .bar .switch{padding:0}
   }
   @media (max-width: 440px){
     /* 极窄：文字全收起，只剩 ▾ 小按钮（悬停 title 显示当前模式/模型） */
     .composer .bar{flex-wrap:nowrap !important}
-    #btnModel,#btnMode{max-width:34px;min-width:26px;padding:0 4px;justify-content:center}
-    #frModeLabel,#modelLabel{display:none}
-    #btnModel .caret,#btnMode .caret{font-size:11px;opacity:.85}
+    #btnModel,#btnMode,#btnPerm{max-width:34px;min-width:26px;padding:0 4px;justify-content:center}
+    #frModeLabel,#modelLabel,#permLabel{display:none}
+    #btnModel .caret,#btnMode .caret,#btnPerm .caret{font-size:11px;opacity:.85}
     #send{padding:0 10px}
   }
 
