@@ -275,6 +275,23 @@
     #btnModel .caret,#btnMode .caret{font-size:11px;opacity:.85}
     #send{padding:0 10px}
   }
+
+  /* 会话组管理：窄屏重排（按钮不再乱换行） */
+  .gm-new{flex-wrap:wrap}
+  .gm-row{flex-wrap:wrap;row-gap:8px}
+  .gm-row .gm-info{min-width:0}
+  @media (max-width: 560px){
+    .gm-new{gap:6px}
+    .gm-new #gmTitle{flex:1 1 100%}
+    .gm-new #gmDefaultPermBtn{flex:1 1 100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gm-new > button{flex:1 1 auto;justify-content:center;white-space:nowrap}
+    .gm-row{align-items:center}
+    .gm-row .gm-info{flex:1 1 calc(100% - 64px);order:1}
+    .gm-row .gm-st{order:2;margin-left:auto}
+    .gm-row .gm-perm{order:3;flex:1 1 auto;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gm-row .gm-ops{order:4;flex:0 0 auto}
+    .gm-ids{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  }
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
@@ -798,7 +815,7 @@
     var dbtn = $('gmDefaultPermBtn')
     if (dbtn){
       var dn = (perm.options || []).filter(function(o){ return o.value === (d.defaultPreset || '') })[0]
-      dbtn.textContent = '新建默认：' + (dn ? (dn.name || dn.value) : '跟随 DSH') + ' ▾'
+      dbtn.textContent = '默认：' + (dn ? (dn.name || dn.value) : '跟随 DSH') + ' ▾'
       dbtn.title = '新建会话组的默认权限（' + (dn ? (dn.name || dn.value) : '跟随 DSH') + '）'
     }
     if (!list.length){
