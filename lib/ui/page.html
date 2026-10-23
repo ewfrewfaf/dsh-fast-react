@@ -448,6 +448,18 @@
         <button id="btnCloseDrawer" class="ghost" style="padding:4px 9px">关闭</button>
       </div>
       <div class="db">
+        <!-- 操作与配置：置顶（常用操作不用滚到底） -->
+        <h4>操作与配置</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btnRebuild">重建会话</button>
+          <button id="btnCfg">保存限额</button>
+        </div>
+        <div class="cfgrow">
+          <span style="font-size:12px;color:var(--fg2)">前台上限</span>
+          <input id="cFront" type="number" min="1000" step="1000" />
+          <span style="font-size:12px;color:var(--fg2)">后台上限</span>
+          <input id="cBack" type="number" min="1000" step="1000" />
+        </div>
         <h4>任务进度</h4>
         <div class="kv" id="progBox"></div>
         <div class="steps" id="steps" style="margin-top:9px"></div>
@@ -466,18 +478,6 @@
         <div class="sep"></div>
         <h4>事件流</h4>
         <div id="events"></div>
-        <div class="sep"></div>
-        <h4>操作与配置</h4>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="btnRebuild">重建会话</button>
-          <button id="btnCfg">保存限额</button>
-        </div>
-        <div class="cfgrow">
-          <span style="font-size:12px;color:var(--fg2)">前台上限</span>
-          <input id="cFront" type="number" min="1000" step="1000" />
-          <span style="font-size:12px;color:var(--fg2)">后台上限</span>
-          <input id="cBack" type="number" min="1000" step="1000" />
-        </div>
       </div>
     </aside>
   </main>
