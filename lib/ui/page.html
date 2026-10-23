@@ -194,6 +194,34 @@
   body.embed header{padding:8px 14px}
   body.embed #chat{padding:16px 18px 6px}
   body.embed footer{padding:8px 14px 12px}
+
+  /* ── 极窄窗口适配（DSH 侧栏拖到最窄时；按容器宽度逐级降级） ───────────── */
+  @media (max-width: 560px){
+    header{padding:0 10px;gap:6px;height:auto;min-height:26px;flex-wrap:nowrap;overflow:hidden}
+    header .title{font-size:12.5px;letter-spacing:0;white-space:nowrap}
+    header .chips{gap:4px;min-width:0;overflow:hidden;flex-wrap:nowrap}
+    header .chip{padding:1px 6px;font-size:10.5px}
+    header button{padding:2px 7px;font-size:11.5px}
+    #modelChip,#permChip{display:none !important}   /* 模型/权限在输入栏与技术面板里都有 */
+    .empty-title{font-size:28px;letter-spacing:8px;padding-left:8px;line-height:1.35;transform:none;white-space:nowrap}
+    .composer{padding:12px 13px 8px;border-radius:22px}
+    .composer .bar{gap:5px;flex-wrap:nowrap;overflow:hidden}
+    .composer .bar .hint{display:none}
+    #btnModel,#btnMode{max-width:92px;padding:0 6px;font-size:12px}
+    #modelLabel,#frModeLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  }
+  @media (max-width: 440px){
+    header #fphase,header #bphase{display:none}      /* 前台/后台状态由左侧圆点+技术面板表达 */
+    header .chips .chip:first-child,header .chips .chip:nth-child(2){display:none}
+    .empty-title{font-size:22px;letter-spacing:6px;padding-left:6px}
+    .msg,.bubble{max-width:100% !important}
+  }
+  @media (max-width: 380px){
+    header .title{display:none}                       /* 极窄：只留状态点 + 操作按钮 */
+    #modeChip{display:none !important}                /* 模式在输入栏按钮里选 */
+    .composer{padding:10px 10px 6px}
+    .composer textarea{min-height:44px;font-size:13.5px}
+  }
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
