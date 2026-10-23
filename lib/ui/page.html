@@ -808,5 +808,21 @@
   setInterval(load, 1000)
 })();
 </script>
+<div id="frModeBox" style="position:fixed;right:12px;bottom:8px;z-index:9999;background:#232326;border:1px solid #333;border-radius:8px;padding:6px 8px;font:12px system-ui;color:#ddd;display:flex;gap:8px;align-items:center">
+<span style="color:#888">模式</span>
+<select id="frModeSel" style="background:#2c2c2e;color:#eee;border:1px solid #444;border-radius:6px;padding:2px 4px"></select>
+<label style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" id="frModeLock">锁定</label>
+</div>
+<script>
+(function(){
+var N={quick:"速答",consult:"咨询",retrieval:"检索",coding:"编码",refactor:"重构",batchwork:"批量",ops:"巡检",review:"审查",explore:"探索",compare:"多源对比",research:"深调研",deliver:"长交付"};
+var sel=document.getElementById("frModeSel"),lock=document.getElementById("frModeLock");
+function api(p,o){return fetch(p,o).then(function(r){return r.json()})}
+function refresh(){api("/fr/api/mode").then(function(j){var m=j&&j.mode;var h="";for(var k in N){h+='<option value="'+k+'"'+(k===m?" selected":"")+'>'+N[k]+'</option>'}sel.innerHTML=h;lock.checked=!!(j&&j.locked)})}
+sel.onchange=function(){api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:sel.value})}).then(function(){refresh();try{load()}catch(e){}})};
+lock.onchange=function(){api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locked:lock.checked})})};
+refresh();setInterval(refresh,15000);
+})();
+</script>
 </body>
 </html>
