@@ -273,6 +273,8 @@
           </label>
           <span class="grow"></span>
           <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
+<select id="frModeSel" title="任务模式" style="height:26px;max-width:104px;background:transparent;border:0;color:var(--fg);font:12px system-ui;cursor:pointer;outline:none;margin-right:2px"></select>
+<button id="frModeLockBtn" title="锁定模式（禁止自动判型）" style="height:26px;padding:0 5px;background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:12px">🔓</button>
           <button id="send" class="send" title="发送 (Enter)">↑</button>
         </div>
         <div id="modelMenu"></div>
@@ -821,19 +823,18 @@
   load().then(nextPoll, nextPoll)
 })();
 </script>
-<div id="frModeBox" style="position:fixed;right:12px;bottom:8px;z-index:9999;background:#232326;border:1px solid #333;border-radius:8px;padding:6px 8px;font:12px system-ui;color:#ddd;display:flex;gap:8px;align-items:center">
-<span style="color:#888">模式</span>
-<select id="frModeSel" style="background:#2c2c2e;color:#eee;border:1px solid #444;border-radius:6px;padding:2px 4px"></select>
-<label style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" id="frModeLock">锁定</label>
-</div>
 <script>
+// 模式选择器（2026-10-24 从右下角浮层移到输入栏，避免遮挡内容）
 (function(){
 var N={quick:"速答",consult:"咨询",retrieval:"检索",coding:"编码",refactor:"重构",batchwork:"批量",ops:"巡检",review:"审查",explore:"探索",compare:"多源对比",research:"深调研",deliver:"长交付"};
-var sel=document.getElementById("frModeSel"),lock=document.getElementById("frModeLock");
+var sel=document.getElementById("frModeSel"),lockBtn=document.getElementById("frModeLockBtn");
+if(!sel||!lockBtn)return;
+var locked=false;
 function api(p,o){return fetch(p,o).then(function(r){return r.json()})}
-function refresh(){api("/fr/api/mode").then(function(j){var m=j&&j.mode;var h="";for(var k in N){h+='<option value="'+k+'"'+(k===m?" selected":"")+'>'+N[k]+'</option>'}sel.innerHTML=h;lock.checked=!!(j&&j.locked)})}
+function paintLock(){lockBtn.textContent=locked?"🔒":"🔓";lockBtn.style.color=locked?"#e0b341":"var(--muted)"}
+function refresh(){api("/fr/api/mode").then(function(j){var m=j&&j.mode;var h="";for(var k in N){h+='<option value="'+k+'"'+(k===m?" selected":"")+'>'+N[k]+'</option>'}sel.innerHTML=h;locked=!!(j&&j.locked);paintLock()})}
 sel.onchange=function(){api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:sel.value})}).then(function(){refresh();try{load()}catch(e){}})};
-lock.onchange=function(){api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locked:lock.checked})})};
+lockBtn.onclick=function(){locked=!locked;paintLock();api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locked:locked})}).then(function(){try{load()}catch(e){}})};
 refresh();setInterval(refresh,15000);
 })();
 </script>
