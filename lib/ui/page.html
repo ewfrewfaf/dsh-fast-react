@@ -567,6 +567,9 @@
       var bm = (d.models.back && d.models.back.model) || d.models.model
       var fp = (d.models.front && d.models.front.provider) || d.models.provider || ''
       var bp = (d.models.back && d.models.back.provider) || d.models.provider || ''
+      modelSel.both = { provider: d.models.provider || fp, model: fm }
+      modelSel.front = { provider: fp, model: fm }
+      modelSel.back = { provider: bp, model: bm }
       var labOf = (typeof modelLabel === 'function') ? modelLabel : function(x){ return x }
       $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + labOf(fm)) : ('前台 ' + labOf(fm) + ' · 后台 ' + labOf(bm))
       $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
@@ -577,6 +580,12 @@
 
   // ── 模型切换（DSH 同位置：输入栏右下、发送键左侧）────────────────────────
   var modelCache = null, modelOpen = false, modelRole = 'both'
+  // 每个角色当前生效的模型（来自 /status 的 models.front/back；切换成功后立即更新，用于菜单高亮）
+  var modelSel = { both: null, front: null, back: null }
+  function pickSel(role){
+    var key = (role === 'front' || role === 'back') ? role : 'both'
+    return modelSel[key] || null
+  }
   function loadModels(){
     if (modelCache) return Promise.resolve(modelCache)
     return api('/models').then(function(m){ modelCache = m; return m }).catch(function(){ return { providers: [], current: {} } })
@@ -592,7 +601,9 @@
   }
   function modelLabel(mo){ return MODEL_LABELS[mo] || mo }
   function renderModelMenu(m){
-    var curP = (m.current && m.current.provider) || '', cur = (m.current && m.current.model) || ''
+    var sel = pickSel(modelRole)
+    var curP = (sel && sel.provider) || (m.current && m.current.provider) || ''
+    var cur = (sel && sel.model) || (m.current && m.current.model) || ''
     var avail = (m.providers || []).filter(function(p){ return (p.models || []).length })
     var unavail = (m.providers || []).filter(function(p){ return !(p.models || []).length })
     var html = ''
@@ -642,11 +653,11 @@
     var p = op.dataset.p, m = op.dataset.m
     api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m, role: modelRole }) })
       .then(function(){
-        modelCache = null
+        // 立即记住本角色的选择 → 高亮马上跟上
+        modelSel[modelRole] = { provider: p, model: m }
         toast('模型已切换（' + (modelRole === 'both' ? '前后台' : modelRole === 'front' ? '前台' : '后台') + '）：' + p + '/' + m)
-        // 菜单保持打开，方便继续给另一角色选
-        loadModels().then(function(mm){ renderModelMenu(mm) })
-        load()
+        renderModelMenu(modelCache || { providers: [], current: {} })
+        load()   // 异步刷新真实状态（以 /status 为准）
       })
       .catch(function(err){ toast('切换失败：' + err.message, true) })
   }
