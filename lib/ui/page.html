@@ -202,7 +202,6 @@
     header .chips{gap:4px;min-width:0;overflow:hidden;flex-wrap:nowrap}
     header .chip{padding:1px 6px;font-size:10.5px}
     header button{padding:2px 7px;font-size:11.5px}
-    #modelChip,#permChip{display:none !important}   /* 模型/权限在输入栏与技术面板里都有 */
     .empty-title{font-size:28px;letter-spacing:8px;padding-left:8px;line-height:1.35;transform:none;white-space:nowrap}
     .composer{padding:12px 13px 8px;border-radius:22px}
     .composer .bar{gap:5px;flex-wrap:nowrap;overflow:hidden}
@@ -218,7 +217,6 @@
   }
   @media (max-width: 380px){
     header .title{display:none}                       /* 极窄：只留状态点 + 操作按钮 */
-    #modeChip{display:none !important}                /* 模式在输入栏按钮里选 */
     .composer{padding:10px 10px 6px}
     .composer textarea{min-height:44px;font-size:13.5px}
   }
@@ -241,6 +239,17 @@
     #btnMode{margin-left:auto}
     #btnModel{max-width:104px}
   }
+
+  /* 权限菜单（与模型菜单同款外观） */
+  #permMenu{position:fixed;display:none;z-index:60;min-width:240px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+  #permMenu.show{display:block}
+  #permMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #permMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #permMenu .op:hover{background:rgba(255,255,255,.08)}
+  .gm-perm.perm-btn{cursor:pointer;text-align:left;font:12px system-ui;color:var(--fg);padding:4px 8px;border-radius:8px}
+
+  /* 模型 chip 窄屏：保留但省略（title 里是完整前后台） */
+  @media (max-width: 560px){ #modelChip{max-width:100%;overflow:hidden;text-overflow:ellipsis} #modelTxt{display:inline-block;max-width:180px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom} }
 
   /* ── 窄屏：模式/模型按钮折叠为小按钮（保持单行，不再换行错位）────────── */
   @media (max-width: 560px){
@@ -306,9 +315,7 @@
     <span class="chips">
       <span class="chip">前台 <b id="fphase">—</b></span>
       <span class="chip">后台 <b id="bphase">—</b></span>
-      <span class="chip" id="modeChip" style="display:none" title="点击循环切换任务模式">模式 <b id="modeTxt">—</b></span>
       <span class="chip" id="modelChip" style="display:none">模型 <b id="modelTxt">—</b></span>
-      <span class="chip" id="permChip" style="display:none">权限 <b id="permTxt">—</b></span>
     </span>
     <span class="grow"></span>
     <button id="btnGroups" class="icon" title="会话组管理">▦</button>
@@ -357,7 +364,7 @@
       </div>
       <div class="gm-new">
         <input id="gmTitle" placeholder="标题（可选），例如：桌面整理" maxlength="60" />
-        <select id="gmDefaultPerm" title="新建会话组的默认权限（沙箱模式 + 审批策略）"></select>
+        <button id="gmDefaultPermBtn" class="perm-btn gm-perm" data-def="1" title="新建会话组的默认权限（沙箱模式 + 审批策略）">新建默认：跟随 DSH ▾</button>
         <button id="btnGroupCreate" class="primary">新建</button>
         <button id="btnGroupAdopt" class="ghost" title="把当前已接线的前后台直接收编成一个组（不新建会话）">收编当前</button>
         <button id="btnGroupRepair" class="ghost" title="重建丢失会话 / 纠正编号 / 重新挂到工作区">自愈</button>
@@ -365,6 +372,7 @@
       <div id="gmList"></div>
       <div class="gm-foot">每组 = 前台 + 后台两个会话，全部挂在「快速反应」工作区下，可在 DSH 侧边栏直接打开。</div>
     </div>
+    <div id="permMenu"></div>
     <aside id="drawer">
       <div class="dh">
         <b style="font-size:13px">技术面板</b>
@@ -552,21 +560,14 @@
     else if (w.state === 'unwired' || w.state === 'disabled'){ $('live').className = 'dot' }
     if (d.models && d.models.model){
       $('modelChip').style.display=''
-      // ★ Phase 6：前后台模型可能不同 ⇒ 有分开配置时并列显示
+      // 前后台模型分别显示（同一模型时仍带前缀，避免"只显示一个"的误解）
       var fm = (d.models.front && d.models.front.model) || d.models.model
       var bm = (d.models.back && d.models.back.model) || d.models.model
-      $('modelTxt').textContent = (fm === bm) ? fm : ('前台 ' + fm + ' / 后台 ' + bm)
+      var fp = (d.models.front && d.models.front.provider) || d.models.provider || ''
+      var bp = (d.models.back && d.models.back.provider) || d.models.provider || ''
+      $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + fm) : ('前台 ' + fm + ' · 后台 ' + bm)
+      $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
       $('modelLabel').textContent = fm                          // 输入栏右下模型切换器标签
-    }
-    // ★ Phase 1：模式 chip（点击循环切换；锁定状态加 🔒）
-    if (d.mode && d.mode.mode){
-      $('modeChip').style.display=''
-      $('modeTxt').textContent = (d.mode.label || d.mode.mode) + (d.mode.locked ? ' 🔒' : '')
-      $('btnMode') && ($('btnMode').textContent = d.mode.label || d.mode.mode)
-    }
-    if (d.permissions && (d.permissions.front || d.permissions.back)){
-      $('permChip').style.display=''
-      $('permTxt').textContent = (d.permissions.front || '—') + (d.permissions.back && d.permissions.back !== d.permissions.front ? ' / ' + d.permissions.back : '')
     }
     $('btnStop').disabled = !d.enabled
   }
@@ -744,21 +745,13 @@
   function renderGroups(d){
     var list = d.groups || []
     var perm = d.permission || { options: [] }
-    // 新建默认权限下拉（只初始化一次，之后只同步值）
-    var dsel = $('gmDefaultPerm')
-    if (dsel){
-      if (!dsel.getAttribute('data-init')){
-        dsel.setAttribute('data-init', '1')
-        dsel.innerHTML = '<option value="">新建默认：跟随 DSH</option>' + (perm.options || []).map(function(o){
-          return '<option value="' + esc(o.value) + '">新建默认：' + esc(o.name || o.value) + '</option>'
-        }).join('')
-        dsel.onchange = function(){
-          api('/config', { method: 'POST', body: JSON.stringify({ permissionPreset: dsel.value }) })
-            .then(function(){ toast('新建会话组默认权限：' + (dsel.value || '跟随 DSH')); loadGroups() })
-            .catch(function(e){ toast('保存失败：' + e.message, true) })
-        }
-      }
-      dsel.value = d.defaultPreset || ''
+    permCatalog = (perm.options || [])
+    // 新建默认权限按钮（点击弹出与模型切换同款的菜单）
+    var dbtn = $('gmDefaultPermBtn')
+    if (dbtn){
+      var dn = (perm.options || []).filter(function(o){ return o.value === (d.defaultPreset || '') })[0]
+      dbtn.textContent = '新建默认：' + (dn ? (dn.name || dn.value) : '跟随 DSH') + ' ▾'
+      dbtn.title = '新建会话组的默认权限（' + (dn ? (dn.name || dn.value) : '跟随 DSH') + '）'
     }
     if (!list.length){
       $('gmList').innerHTML = '<div class="gm-empty">还没有会话组，点上方「新建会话组」。</div>'
@@ -767,17 +760,14 @@
     $('gmList').innerHTML = list.map(function(g){
       var cls = function(p){ return p === 'missing' ? 'miss' : (p === 'running' ? 'run' : '') }
       var f = g.frontPhase || 'missing', b = g.backPhase || 'missing'
-      var opts = (perm.options || []).map(function(o){
-        return '<option value="' + esc(o.value) + '"' + (o.value === (g.preset || '') ? ' selected' : '') + '>' + esc(o.name || o.value) + '</option>'
-      }).join('')
+      var pn = (perm.options || []).filter(function(o){ return o.value === (g.preset || '') })[0]
+      var permLabel = pn ? (pn.name || pn.value) : '跟随默认'
       return '<div class="gm-row ' + (g.active ? 'active' : '') + '">' +
         '<span class="gm-key">' + esc(g.key) + '</span>' +
         '<div class="gm-info"><div class="gm-title">' + esc(g.title || '') + (g.active ? ' <span style="color:#7aaaff;font-size:11px">· 当前</span>' : '') + '</div>' +
         '<div class="gm-ids">' + esc(String(g.frontId || '').slice(0, 28)) + ' / ' + esc(String(g.backId || '').slice(0, 28)) + '</div></div>' +
         '<div class="gm-st"><span class="gm-dot ' + cls(f) + '">F ' + esc(f) + '</span><span class="gm-dot ' + cls(b) + '">B ' + esc(b) + '</span></div>' +
-        '<select class="gm-perm" data-key="' + esc(g.key) + '" title="该组前后台的权限（沙箱模式 + 审批策略）；「跟随默认」= DSH 默认">' +
-          '<option value=""' + (g.preset ? '' : ' selected') + '>跟随默认</option>' + opts +
-        '</select>' +
+        '<button class="gm-perm perm-btn" data-key="' + esc(g.key) + '" title="该组前后台权限（沙箱 + 审批）；点击选择">' + esc(permLabel) + ' ▾</button>' +
         '<div class="gm-ops"><button class="ghost" data-act="switch" data-key="' + esc(g.key) + '">切换</button>' +
         '<button class="ghost" data-act="del" data-key="' + esc(g.key) + '">删除</button></div></div>'
     }).join('')
@@ -831,19 +821,49 @@
       })
     }
   })
-  // 权限下拉：选中即应用（沙箱模式 + 审批策略一起生效）
-  $('gmList').addEventListener('change', function(e){
+  // ── 权限切换：按钮 + 弹出菜单（与模型切换同款，2026-10-24）──────────────
+  var permCatalog = [], permTarget = null
+  function closePermMenu(){ var m = $('permMenu'); if (m) m.classList.remove('show') }
+  function openPermMenu(btn, target){
+    permTarget = target
+    var menu = $('permMenu'); if (!menu) return
+    var html = '<div class="grp">权限（沙箱 + 审批）</div><div class="op" data-v="">跟随 DSH</div>'
+    permCatalog.forEach(function(o){ html += '<div class="op" data-v="' + esc(o.value) + '">' + esc(o.name || o.value) + '</div>' })
+    menu.innerHTML = html
+    menu.classList.add('show')
+    var r = btn.getBoundingClientRect()
+    var top = r.bottom + 6
+    if (top + 220 > window.innerHeight) top = Math.max(8, r.top - 226)
+    menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 260)) + 'px'
+    menu.style.top = top + 'px'
+  }
+  document.addEventListener('click', function(e){
     var t = e.target
-    if (!t || !t.classList || !t.classList.contains('gm-perm')) return
-    var key = t.getAttribute('data-key'), preset = t.value
-    api('/groups', { method: 'POST', body: JSON.stringify({ action: 'policy', key: key, preset: preset }) })
-      .then(function(r){
-        var live = r && (r.frontPreset || r.backPreset)
-        toast('权限设为 ' + (preset || '跟随默认') + (live ? '（当前生效: ' + live + '）' : ''))
-        loadGroups()
-      })
-      .catch(function(err){ toast('设置权限失败：' + err.message, true); loadGroups() })
+    if (!t || !t.closest) return
+    var btn = t.closest('.perm-btn')
+    if (btn){
+      e.preventDefault(); e.stopPropagation()
+      var def = !!btn.dataset.def
+      openPermMenu(btn, def ? { kind: 'default' } : { kind: 'group', key: btn.dataset.key })
+      return
+    }
+    var op = t.closest('#permMenu .op')
+    if (op && permTarget){
+      var v = op.getAttribute('data-v') || ''
+      if (permTarget.kind === 'default'){
+        api('/config', { method: 'POST', body: JSON.stringify({ permissionPreset: v }) })
+          .then(function(){ toast('新建默认权限：' + (v || '跟随 DSH')); closePermMenu(); loadGroups() })
+          .catch(function(err){ toast('保存失败：' + err.message, true) })
+      } else {
+        api('/groups', { method: 'POST', body: JSON.stringify({ action: 'policy', key: permTarget.key, preset: v }) })
+          .then(function(r){ var live = r && (r.frontPreset || r.backPreset); toast('权限设为 ' + (v || '跟随默认') + (live ? '（当前生效: ' + live + '）' : '')); closePermMenu(); loadGroups(); load() })
+          .catch(function(err){ toast('设置权限失败：' + err.message, true); loadGroups() })
+      }
+      return
+    }
+    if (!t.closest('#permMenu') && !t.closest('.perm-btn')) closePermMenu()
   })
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePermMenu() })
 
   function drawer(open){
     $('drawer').classList.toggle('open', open)
