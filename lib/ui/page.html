@@ -376,6 +376,14 @@
   .composer.dragover::after{content:"松手即添加文件路径";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#9ec1ff;pointer-events:none;border-radius:28px}
   #dropHint{display:none;margin:0 22px 6px;padding:6px 10px;background:rgba(122,170,255,.12);border:1px dashed rgba(122,170,255,.5);border-radius:8px;font-size:12px;color:#9ec1ff}
   #dropHint.show{display:block}
+
+  /* 拖入的文件路径：蓝色标签（2026-10-24） */
+  #fileChips{display:none}
+  #fileChips.show{display:flex}
+  .file-chip{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 6px 3px 9px;background:rgba(122,170,255,.16);border:1px solid rgba(122,170,255,.55);border-radius:7px;color:#8fbaff;font:11.5px/1.4 ui-monospace,Consolas,monospace}
+  .file-chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+  .file-chip .x{cursor:pointer;color:#6d9be0;font-size:11px;padding:0 2px;border-radius:3px}
+  .file-chip .x:hover{color:#ff9a9a;background:rgba(255,255,255,.08)}
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
@@ -440,6 +448,7 @@
     <div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b><span id="errTxt"></span></div>
     <footer>
       <div class="composer">
+        <div id="fileChips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:7px"></div>
         <textarea id="input" placeholder="发消息或创建任务..."></textarea>
         <div class="bar">
           <span class="hint" id="hint">就绪</span>
@@ -883,9 +892,13 @@
   }
   function sendTask(){
     var v = $('input').value.trim()
-    if (!v) return
+    var fps = (typeof window.__frFilePaths === 'function') ? window.__frFilePaths() : []
+    if (!v && !fps.length) return
+    if (!v) v = '请阅读以下文件：'
+    if (fps.length) v = v + '\n\n【附件文件】\n' + fps.map(function(p){ return '- ' + p }).join('\n')
     var interrupt = !!$('fireMode').checked
     $('input').value = ''
+    if (typeof window.__frClearFiles === 'function') window.__frClearFiles()
     try { localStorage.removeItem(DRAFT_KEY) } catch (err) {}
     sentHistory.push(v)
     if (sentHistory.length > 30) sentHistory.shift()
@@ -1123,12 +1136,33 @@
     }
     function insert(paths){
       if (!paths.length) return
-      var cur = ta.value
-      var add = paths.join('\n')
-      ta.value = cur ? (cur.replace(/\s*$/, '') + '\n' + add) : add
-      try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length) } catch (e) {}
-      saveDraft()
-      toast('已添加 ' + paths.length + ' 个文件路径（发送后前台会读取）')
+      var box = document.getElementById('fileChips')
+      if (!box) return
+      paths.forEach(function(p){
+        var chip = document.createElement('span')
+        chip.className = 'file-chip'
+        chip.title = p
+        var nm = document.createElement('span')
+        nm.className = 'nm'
+        nm.textContent = p.split(/[\\/]/).pop() || p
+        var x = document.createElement('span')
+        x.className = 'x'; x.textContent = '✕'; x.title = '移除'
+        x.onclick = function(){ chip.remove(); if (!box.children.length) box.classList.remove('show') }
+        chip.appendChild(nm); chip.appendChild(x)
+        chip.dataset.path = p
+        box.appendChild(chip)
+      })
+      box.classList.add('show')
+      try { ta.focus() } catch (e) {}
+      toast('已添加 ' + paths.length + ' 个文件（蓝色标签，发送时一并带上）')
+    }
+    window.__frFilePaths = function(){
+      var box = document.getElementById('fileChips'); if (!box) return []
+      return Array.prototype.map.call(box.children, function(c){ return c.dataset.path }).filter(Boolean)
+    }
+    window.__frClearFiles = function(){
+      var box = document.getElementById('fileChips'); if (!box) return
+      box.innerHTML = ''; box.classList.remove('show')
     }
     comp.addEventListener('dragenter', function(e){ e.preventDefault(); depth++; comp.classList.add('dragover') })
     comp.addEventListener('dragover', function(e){ e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy' } catch (err) {} })
