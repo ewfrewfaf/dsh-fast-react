@@ -567,9 +567,10 @@
       var bm = (d.models.back && d.models.back.model) || d.models.model
       var fp = (d.models.front && d.models.front.provider) || d.models.provider || ''
       var bp = (d.models.back && d.models.back.provider) || d.models.provider || ''
-      $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + fm) : ('前台 ' + fm + ' · 后台 ' + bm)
+      var labOf = (typeof modelLabel === 'function') ? modelLabel : function(x){ return x }
+      $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + labOf(fm)) : ('前台 ' + labOf(fm) + ' · 后台 ' + labOf(bm))
       $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
-      $('modelLabel').textContent = fm                          // 输入栏右下模型切换器标签
+      $('modelLabel').textContent = labOf(fm)                   // 输入栏右下模型切换器标签（友好名）
     }
     $('btnStop').disabled = !d.enabled
   }
