@@ -1160,6 +1160,14 @@
       var box = document.getElementById('fileChips'); if (!box) return []
       return Array.prototype.map.call(box.children, function(c){ return c.dataset.path }).filter(Boolean)
     }
+    // 接收父页面转发的拖放文件（iframe 里常常收不到原生 drag 事件）
+    window.addEventListener('message', function(ev){
+      try {
+        var d = ev && ev.data
+        if (!d || !d.__frDropFiles || !d.__frDropFiles.length) return
+        insert(d.__frDropFiles)
+      } catch (e) {}
+    })
     window.__frClearFiles = function(){
       var box = document.getElementById('fileChips'); if (!box) return
       box.innerHTML = ''; box.classList.remove('show')
