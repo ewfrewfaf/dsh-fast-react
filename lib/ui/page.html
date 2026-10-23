@@ -144,7 +144,7 @@
   #permQuickMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #permQuickMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
   #permQuickMenu .op:hover{background:rgba(255,255,255,.08)}
-  #permQuickMenu .op.cur{color:#7aaaff}
+  #permQuickMenu .op.cur{color:#7aaaff;background:rgba(122,170,255,.16);border:1px solid rgba(122,170,255,.5)}
   #modelMenu .grp,#frModeMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #modelMenu .op,#frModeMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
   #modelMenu .op:hover,#frModeMenu .op:hover{background:rgba(255,255,255,.08)}
@@ -778,6 +778,14 @@
       showErr('模型调用失败（' + (d.lastError.role === 'front' ? '前台' : d.lastError.role === 'back' ? '后台' : '会话') + '）', friendly)
       $('hint').textContent = '模型出错：' + (friendly.length > 40 ? friendly.slice(0, 40) + '…' : friendly)
     }
+    // ★ 权限按钮标签同步（不再只靠 initPermMenu 的 15s 轮询）
+    try {
+      var pv = (d.permissions && (d.permissions.front || d.permissions.default)) || ''
+      var pl = document.getElementById('permLabel')
+      var PMAP = { 'read-only': '只读', 'workspace-write': '工作区可写', 'danger-full-access': '完全权限', '': '权限' }
+      if (pl) { pl.textContent = PMAP[pv] !== undefined ? PMAP[pv] : (pv || '权限'); try { localStorage.setItem('fr_perm', pv) } catch (e) {} }
+      var pb = document.getElementById('btnPerm'); if (pb) pb.title = '前后台权限：' + (PMAP[pv] || pv || '未知')
+    } catch (e) {}
     $('btnStop').disabled = !d.enabled
   }
 
@@ -1278,7 +1286,7 @@
       label.textContent = hit ? hit[1] : '权限'
       btn.title = '前后台权限：' + (hit ? hit[1] : cur || '未知')
     }
-    function toggle(f){ open = typeof f === 'boolean' ? f : !open; if (open && window.__frCloseOtherMenus) window.__frCloseOtherMenus('perm'); menu.classList[open ? 'add' : 'remove']('show'); if (open) refresh() }
+    function toggle(f){ open = typeof f === 'boolean' ? f : !open; if (open && window.__frCloseOtherMenus) window.__frCloseOtherMenus('perm'); menu.classList[open ? 'add' : 'remove']('show'); if (open) { try { cur = localStorage.getItem('fr_perm') || cur } catch (e) {} refresh() } }
     document.addEventListener('fr:menu-others-open', function(ev){
       if (ev && ev.detail && ev.detail.keep === 'perm') return
       if (open) { open = false; try { menu.classList.remove('show') } catch (e) {} }
@@ -1299,7 +1307,13 @@
           return fetch('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: active.key, preset: preset }) })
         }
         return fetch('/fr/api/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ permissionPreset: preset }) })
-      }).then(function(){ toast('权限已设为 ' + (preset || '跟随 DSH')); toggle(false); load() })
+      }).then(function(){
+        cur = preset                       // ★ 立即记住，高亮马上跟上
+        try { localStorage.setItem('fr_perm', preset) } catch (e) {}
+        render()
+        toast('权限已设为 ' + (preset || '跟随 DSH'))
+        toggle(false); load()
+      })
         .catch(function(){ toast('设置权限失败', true) })
     }
     document.addEventListener('click', function(e){
