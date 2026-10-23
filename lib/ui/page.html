@@ -567,9 +567,23 @@
       var bm = (d.models.back && d.models.back.model) || d.models.model
       var fp = (d.models.front && d.models.front.provider) || d.models.provider || ''
       var bp = (d.models.back && d.models.back.provider) || d.models.provider || ''
-      modelSel.both = { provider: d.models.provider || fp, model: fm }
-      modelSel.front = { provider: fp, model: fm }
-      modelSel.back = { provider: bp, model: bm }
+      var act = d.models.actual || {}
+      if (act.front || act.back){
+        modelSel.front = act.front || { provider: fp, model: fm }
+        modelSel.back = act.back || { provider: bp, model: bm }
+        modelSel.both = modelSel.front
+        // 顶部显示也用实际生效的模型
+        fm = modelSel.front.model; bm = modelSel.back.model
+        fp = modelSel.front.provider || fp; bp = modelSel.back.provider || bp
+        var lab2 = (typeof modelLabel === 'function') ? modelLabel : function(x){ return x }
+        $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + lab2(fm)) : ('前台 ' + lab2(fm) + ' · 后台 ' + lab2(bm))
+        $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
+        $('modelLabel').textContent = lab2(fm)
+      } else {
+        modelSel.both = { provider: d.models.provider || fp, model: fm }
+        modelSel.front = { provider: fp, model: fm }
+        modelSel.back = { provider: bp, model: bm }
+      }
       var labOf = (typeof modelLabel === 'function') ? modelLabel : function(x){ return x }
       $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + labOf(fm)) : ('前台 ' + labOf(fm) + ' · 后台 ' + labOf(bm))
       $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
@@ -601,16 +615,20 @@
   }
   function modelLabel(mo){ return MODEL_LABELS[mo] || mo }
   function renderModelMenu(m){
-    var sel = pickSel(modelRole)
-    var curP = (sel && sel.provider) || (m.current && m.current.provider) || ''
-    var cur = (sel && sel.model) || (m.current && m.current.model) || ''
+    var sels = (modelRole === 'both')
+      ? [modelSel.front, modelSel.back, modelSel.both].filter(Boolean)
+      : [pickSel(modelRole)].filter(Boolean)
+    if (!sels.length && m.current) sels = [{ provider: m.current.provider, model: m.current.model }]
+    function isSel(provider, mo){
+      return sels.some(function(x){ return x && x.model === mo && (!x.provider || x.provider === provider) })
+    }
     var avail = (m.providers || []).filter(function(p){ return (p.models || []).length })
     var unavail = (m.providers || []).filter(function(p){ return !(p.models || []).length })
     var html = ''
     avail.forEach(function(p){
       html += '<div class="grp">' + esc(p.provider) + '</div>'
       ;(p.models || []).forEach(function(mo){
-        var isCur = (mo === cur && p.provider === curP)
+        var isCur = isSel(p.provider, mo)
         var lab = modelLabel(mo)
         html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' +
           esc(lab) + (lab !== mo ? '<span class="badge">' + esc(mo) + '</span>' : '') +
