@@ -133,6 +133,7 @@
   #modelMenu .op,#frModeMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
   #modelMenu .op:hover,#frModeMenu .op:hover{background:rgba(255,255,255,.08)}
   #modelMenu .op.cur,#frModeMenu .op.cur{color:#7aaaff}
+  #frModeTip{position:fixed;z-index:60;display:none;max-width:300px;padding:8px 10px;background:#1b1b1e;border:1px solid rgba(255,255,255,.14);border-radius:10px;font:12px/1.55 system-ui;color:#ddd;box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;white-space:normal}
   #modelMenu .op .badge,#frModeMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
   .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s}
   .send:hover:not(:disabled){filter:brightness(1.12)}
@@ -824,23 +825,45 @@
 })();
 </script>
 <script>
-// 模式选择器（2026-10-24：与「切换模型」同款按钮 + 弹出菜单）
+// 模式选择器（2026-10-24：与「切换模型」同款按钮 + 弹出菜单；悬停 0.6s 显示简介）
 (function(){
-var N={quick:"速答",consult:"咨询",retrieval:"检索",coding:"编码",refactor:"重构",batchwork:"批量",ops:"巡检",review:"审查",explore:"探索",compare:"多源对比",research:"深调研",deliver:"长交付"};
+var fallback={quick:["速答","不编排：前台直接答，最多查一眼"],consult:["咨询","深度分析：后台可查资料，只产出 analysis.md，不写步骤"],retrieval:["检索","长检索：前台自己并行查，不惊动后台"],coding:["编码","标准编排：后台写路线+步骤，前台执行"],refactor:["重构","大改动/结构重组：步长小、复核密"],batchwork:["批量","大量重复小步：批量投递大、复核稀"],ops:["巡检","运维检查：只读为主、T3 最严"],review:["审查","只读审查：绝不写，只出报告"],explore:["探索","试错型：允许失败，重过程"],compare:["多源对比","检索型加强：强制并行多源"],research:["深调研","长检索+深度分析：后台参与给结论"],deliver:["长交付","多步交付物：默认编排的加强版"]};
 var btn=document.getElementById("btnMode"),menu=document.getElementById("frModeMenu"),label=document.getElementById("frModeLabel"),mark=document.getElementById("frModeLockMark");
 if(!btn||!menu)return;
-var cur="",locked=false,open=false;
+var info={},cur="",locked=false,open=false,hoverTimer=null;
+for(var k in fallback) info[k]={label:fallback[k][0],summary:fallback[k][1]};
+var tip=document.createElement("div");tip.id="frModeTip";document.body.appendChild(tip);
 function api(p,o){return fetch(p,o).then(function(r){return r.json()})}
 function render(){
   var h='<div class="grp">任务模式</div>';
-  for(var k in N){h+='<div class="op'+(k===cur?" cur":"")+'" data-k="'+k+'">'+N[k]+'<span class="badge">'+k+'</span></div>'}
+  for(var k in info){h+='<div class="op'+(k===cur?" cur":"")+'" data-k="'+k+'" data-tip="'+info[k].summary.replace(/"/g,"&quot;")+'">'+info[k].label+'<span class="badge">'+k+'</span></div>'}
   h+='<div class="grp">锁定（禁止自动判型）</div><div class="op" data-lock="1">'+(locked?"🔒 已锁定（点击解锁）":"🔓 未锁定（点击锁定）")+'</div>';
   menu.innerHTML=h;
-  label.textContent=N[cur]||"模式";
+  label.textContent=(info[cur]&&info[cur].label)||"模式";
   mark.textContent=locked?"🔒":"";
 }
-function toggle(f){open=typeof f==="boolean"?f:!open;menu.classList[open?"add":"remove"]("show");if(open)render()}
+function hideTip(){tip.style.display="none"}
+function showTip(op){
+  var txt=op&&op.dataset&&op.dataset.tip;
+  if(!txt)return;
+  tip.textContent=txt;tip.style.display="block";
+  var r=op.getBoundingClientRect();
+  var w=tip.offsetWidth,h=tip.offsetHeight;
+  var left=Math.max(8,Math.min(r.left,window.innerWidth-w-8));
+  var top=r.top-h-8;
+  if(top<8)top=r.bottom+8;
+  tip.style.left=left+"px";tip.style.top=top+"px";
+}
+function armTip(e){
+  var op=e.target&&e.target.closest?e.target.closest(".op[data-tip]"):null;
+  clearTimeout(hoverTimer);hideTip();
+  if(!op)return;
+  hoverTimer=setTimeout(function(){showTip(op)},600);
+}
+function toggle(f){open=typeof f==="boolean"?f:!open;menu.classList[open?"add":"remove"]("show");if(open)render();else{clearTimeout(hoverTimer);hideTip()}}
 btn.onclick=function(e){e.stopPropagation();toggle()};
+menu.addEventListener("mouseover",armTip);
+menu.addEventListener("mouseout",function(){clearTimeout(hoverTimer);hideTip()});
 menu.onclick=function(e){
   var op=e.target&&e.target.closest?e.target.closest(".op"):null;
   if(!op)return;
@@ -850,7 +873,10 @@ menu.onclick=function(e){
 };
 document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;if(open&&!t.closest("#frModeMenu")&&!t.closest("#btnMode"))toggle(false)});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&open)toggle(false)});
-function refresh(){api("/fr/api/mode").then(function(j){cur=(j&&j.mode)||"coding";locked=!!(j&&j.locked);render()})}
+function refresh(){api("/fr/api/mode").then(function(j){
+  if(j&&j.presetsInfo&&j.presetsInfo.length){info={};for(var i=0;i<j.presetsInfo.length;i++){var p=j.presetsInfo[i];info[p.key]={label:p.label,summary:p.summary}}}
+  cur=(j&&j.mode)||"coding";locked=!!(j&&j.locked);render();
+})}
 refresh();setInterval(refresh,15000);
 })();
 </script>
