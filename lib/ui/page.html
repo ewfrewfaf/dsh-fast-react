@@ -726,6 +726,26 @@
       $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
       $('modelLabel').textContent = labOf(fm)                   // 输入栏右下模型切换器标签（友好名）
     }
+    // ★ 模型/回合错误（余额不足、401、限流…）——必须在页面上看得见
+    if (d.lastError && d.lastError.message){
+      var em = String(d.lastError.message)
+      var friendly = em
+      if (/insufficient|balance|欠费|余额|quota|credit|402/i.test(em)) friendly = '账户余额不足或已欠费（请充值后重试）—— 原始信息：' + em
+      else if (/401|unauthorized|invalid.*key|api.?key/i.test(em)) friendly = '模型密钥无效或已过期（请重新登录/换 key）—— 原始信息：' + em
+      else if (/429|rate.?limit|too many/i.test(em)) friendly = '请求过于频繁被限流（稍后重试）—— 原始信息：' + em
+      showErr('模型调用失败（' + (d.lastError.role === 'front' ? '前台' : d.lastError.role === 'back' ? '后台' : '会话') + '）', friendly)
+      $('hint').textContent = '模型出错：' + (friendly.length > 40 ? friendly.slice(0, 40) + '…' : friendly)
+    }
+    // ★ 模型/回合错误（余额不足、401、限流…）——必须在页面上看得见
+    if (d.lastError && d.lastError.message){
+      var em = String(d.lastError.message)
+      var friendly = em
+      if (/insufficient|balance|欠费|余额|quota|credit|402/i.test(em)) friendly = '账户余额不足或已欠费（请充值后重试）—— 原始信息：' + em
+      else if (/401|unauthorized|invalid.*key|api.?key/i.test(em)) friendly = '模型密钥无效或已过期（请重新登录/换 key）—— 原始信息：' + em
+      else if (/429|rate.?limit|too many/i.test(em)) friendly = '请求过于频繁被限流（稍后重试）—— 原始信息：' + em
+      showErr('模型调用失败（' + (d.lastError.role === 'front' ? '前台' : d.lastError.role === 'back' ? '后台' : '会话') + '）', friendly)
+      $('hint').textContent = '模型出错：' + (friendly.length > 40 ? friendly.slice(0, 40) + '…' : friendly)
+    }
     $('btnStop').disabled = !d.enabled
   }
 
