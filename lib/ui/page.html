@@ -364,6 +364,12 @@
   #events > div{padding:1px 0}
   /* 抽屉略加宽，一行放更多 */
   #drawer{width:min(468px,94vw)}
+
+  /* 全局报错条（2026-10-24）：页面 JS / API 出错时显示完整信息，便于排障 */
+  #errBar{position:fixed;top:0;left:0;right:0;z-index:99;display:none;padding:8px 12px;background:#3a1d1f;border-bottom:1px solid #a33;color:#ffd9d9;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:38vh;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  #errBar.show{display:block}
+  #errBar b{color:#ff9a9a}
+  #errBar .x{float:right;cursor:pointer;color:#ffb3b3;margin-left:12px}
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
@@ -403,6 +409,8 @@
 </script>
 </head>
 <body>
+<div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b>
+<span id="errTxt"></span></div>
 <div id="app">
   <header>
     <span id="live" class="dot"></span>
@@ -514,13 +522,53 @@
   if (EMBED) document.body.classList.add('embed')
   var lastChatKey = '', lastCount = 0
 
+  // ── 全局报错展示（不吞错）─────────────────────────────────────────────
+  var _errSeen = {}
+  function showErr(kind, msg, extra){
+    try {
+      var key = kind + '|' + msg
+      if (_errSeen[key]) return             // 同样的错只报一次，避免刷屏
+      _errSeen[key] = 1
+      var bar = $('errBar'), txt = $('errTxt')
+      if (!bar || !txt) return
+      var line = '[' + new Date().toLocaleTimeString() + '] ' + kind + ': ' + msg
+      if (extra) line += '\n' + extra
+      txt.textContent = (txt.textContent ? txt.textContent + '\n' : '') + line
+      bar.classList.add('show')
+      try { console.error('[快速反应]', kind, msg, extra || '') } catch (e) {}
+    } catch (e) {}
+  }
+  window.addEventListener('error', function(e){
+    showErr('JS 错误', (e && e.message) || '未知错误', (e && e.filename ? e.filename + ':' + e.lineno + ':' + e.colno : ''))
+  })
+  window.addEventListener('unhandledrejection', function(e){
+    var r = e && e.reason
+    showErr('未处理的 Promise', (r && (r.message || r)) || '未知', (r && r.stack ? String(r.stack).split('\n').slice(0, 3).join('\n') : ''))
+  })
+
   function toast(msg, isErr){
     var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : '')
     clearTimeout(toast._t); toast._t = setTimeout(function(){ t.className = 'toast' }, 2600)
   }
   function api(path, opts){
-    return fetch('/fr/api' + path, Object.assign({ headers:{ 'content-type':'application/json' }, credentials:'same-origin' }, opts||{}))
-      .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || ('HTTP '+r.status)); return j }) })
+    var url = '/fr/api' + path
+    return fetch(url, Object.assign({ headers:{ 'content-type':'application/json' }, credentials:'same-origin' }, opts||{}))
+      .then(function(r){
+        return r.text().then(function(txt){
+          var j = null
+          try { j = txt ? JSON.parse(txt) : {} } catch (e) {
+            // 非 JSON（多半是 500 崩溃页或代理错误）→ 把原文截断展示
+            throw new Error('HTTP ' + r.status + ' ' + (r.statusText || '') + ' · 响应不是 JSON: ' + String(txt || '').slice(0, 300))
+          }
+          if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status + ' ' + (r.statusText || '')))
+          return j || {}
+        })
+      })
+      .catch(function(err){
+        // 网络层失败（服务未起 / fetch failed）也统一带上网址
+        if (err && err.name === 'TypeError') throw new Error('请求失败 ' + url + '：' + (err.message || '网络错误'))
+        throw err
+      })
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c] }) }
   function fmtMs(ms){ return ms==null ? '—' : (ms<1000 ? Math.round(ms)+'ms' : (ms/1000).toFixed(1)+'s') }
@@ -794,9 +842,10 @@
       lastBusy = !!((d.front && d.front.phase === 'running') || (d.back && d.back.phase === 'running'))
       var n = ((d.chat&&d.chat.front)||[]).length + ((d.chat&&d.chat.back)||[]).length
       if (n !== lastCount){ lastCount = n; $('hint').textContent = n ? (n+' 条消息') : '就绪' }
-    }).catch(function(){
+    }).catch(function(err){
       $('live').className = 'dot'
-      $('hint').textContent = '连接失败'
+      $('hint').textContent = '连接失败：' + ((err && err.message) || '未知')
+      showErr('/status 轮询失败', (err && err.message) || '未知')
     })
   }
 
