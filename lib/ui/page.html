@@ -370,6 +370,12 @@
   #errBar.show{display:block}
   #errBar b{color:#ff9a9a;margin-right:8px;display:block}
   #errBar .x{float:right;cursor:pointer;color:#ffb3b3;margin-left:12px}
+
+  /* 拖放文件（2026-10-24） */
+  .composer.dragover{background:rgba(122,170,255,.12);box-shadow:inset 0 0 0 2px rgba(122,170,255,.65)}
+  .composer.dragover::after{content:"松手即添加文件路径";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#9ec1ff;pointer-events:none;border-radius:28px}
+  #dropHint{display:none;margin:0 22px 6px;padding:6px 10px;background:rgba(122,170,255,.12);border:1px dashed rgba(122,170,255,.5);border-radius:8px;font-size:12px;color:#9ec1ff}
+  #dropHint.show{display:block}
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
@@ -1103,6 +1109,61 @@
     if (!document.hidden) load().then(nextPoll, nextPoll)
     else nextPoll()
   })
+  // ── 拖放文件到对话栏（写入绝对路径，前台可直接 read）──────────────────
+  ;(function initDnd(){
+    var comp = document.querySelector('.composer')
+    var ta = $('input')
+    if (!comp || !ta) return
+    var depth = 0
+    function absPath(f){
+      try { if (f.path) return f.path } catch (e) {}
+      try { if (window.__dshGetPathForFile) { var p = window.__dshGetPathForFile(f); if (p) return p } } catch (e) {}
+      try { if (window.electron && window.electron.getPathForFile) { var p2 = window.electron.getPathForFile(f); if (p2) return p2 } } catch (e) {}
+      return ''
+    }
+    function insert(paths){
+      if (!paths.length) return
+      var cur = ta.value
+      var add = paths.join('\n')
+      ta.value = cur ? (cur.replace(/\s*$/, '') + '\n' + add) : add
+      try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length) } catch (e) {}
+      saveDraft()
+      toast('已添加 ' + paths.length + ' 个文件路径（发送后前台会读取）')
+    }
+    comp.addEventListener('dragenter', function(e){ e.preventDefault(); depth++; comp.classList.add('dragover') })
+    comp.addEventListener('dragover', function(e){ e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy' } catch (err) {} })
+    comp.addEventListener('dragleave', function(e){ e.preventDefault(); depth = Math.max(0, depth - 1); if (!depth) comp.classList.remove('dragover') })
+    comp.addEventListener('drop', function(e){
+      e.preventDefault(); depth = 0; comp.classList.remove('dragover')
+      var dt = e.dataTransfer
+      if (!dt) return
+      var out = []
+      // ① 优先文件
+      if (dt.files && dt.files.length){
+        for (var i = 0; i < dt.files.length; i++){
+          var f = dt.files[i]
+          var p = absPath(f)
+          out.push(p || f.name)
+        }
+      } else if (dt.getData){
+        // ② 从资源管理器拖文件有时只给 text/uri-list 或 text/plain
+        var txt = dt.getData('text/uri-list') || dt.getData('text/plain') || ''
+        txt.split(/\r?\n/).forEach(function(line){
+          line = String(line || '').trim()
+          if (!line || line.charAt(0) === '#') return
+          if (line.indexOf('file://') === 0){
+            try { out.push(decodeURIComponent(line.replace('file:///', '').replace(/\//g, '\\'))) } catch (er) { out.push(line) }
+          } else out.push(line)
+        })
+      }
+      if (!out.length){ toast('没有识别到文件（可能需要从资源管理器拖入）', true); return }
+      insert(out)
+    })
+    // 兜底：整页阻止默认打开文件，避免拖歪时浏览器直接跳转
+    window.addEventListener('dragover', function(e){ e.preventDefault() })
+    window.addEventListener('drop', function(e){ if (!e.target || !e.target.closest || !e.target.closest('.composer')) e.preventDefault() })
+  })();
+
   load().then(nextPoll, nextPoll)
 })();
 </script>
