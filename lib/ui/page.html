@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>快速反应</title>
+<title>随叫随到</title>
 <style>
   :root{
     /* ══ DSH 官方主题 token（--dsw-alias-*）：同源 iframe 内由底部脚本从父页面
@@ -63,8 +63,8 @@
   #chat{flex:1 1 auto;overflow:auto;padding:20px 22px 8px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:1040px;margin:0 auto}
   #chat::-webkit-scrollbar{width:10px}
   #chat::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
-  .empty{margin:auto;text-align:center;color:var(--muted);max-width:520px;line-height:2}
-  .empty-title{font-size:34px;font-weight:600;letter-spacing:2px;color:var(--fg2);opacity:.92}
+  .empty{margin:auto;text-align:center;color:var(--muted);max-width:560px;line-height:2.2}
+  .empty-title{font-size:40px;font-weight:600;letter-spacing:8px;color:var(--fg2);opacity:.92;line-height:1.4;transform:translateY(-4%)}
   .empty b{color:var(--fg2);display:block;margin-bottom:10px;font-size:16px}
   .empty code{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px var(--mono);color:#d2a8ff}
 
@@ -74,7 +74,7 @@
   .avatar{display:none}
   .bubble{display:flex;flex-direction:column;gap:4px;min-width:0}
   .bubble .who{display:none}
-  .bubble .txt{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;color:var(--fg)}
+  .bubble .txt{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.95;color:var(--fg)}
   .msg.me .bubble .txt{background:rgb(44,44,46);border-radius:18px;padding:10px 16px}
   .msg:not(.me) .bubble .txt{background:transparent;padding:0 2px}
   /* 思考过程：浅灰折叠块（默认收起，点开看推理） */
@@ -93,7 +93,7 @@
   .dots i:nth-child(3){animation-delay:.4s}
   @keyframes blink{0%,60%,100%{opacity:.22;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
   /* 可操作通知（T3 确认 / 哨兵 / 上交）：必须显眼，否则用户看不到卡点 */
-  .notice{align-self:center;max-width:86%;font-size:12.5px;line-height:1.65;color:#e3c07b;background:rgba(227,192,123,.07);border:1px solid rgba(227,192,123,.28);border-radius:10px;padding:7px 13px;white-space:pre-wrap;word-break:break-word}
+  .notice{align-self:center;max-width:86%;font-size:12.5px;line-height:1.85;color:#e3c07b;background:rgba(227,192,123,.07);border:1px solid rgba(227,192,123,.28);border-radius:10px;padding:7px 13px;white-space:pre-wrap;word-break:break-word}
   /* 便捷功能：快捷模板 / 悬停复制 */
   .copy{position:absolute;top:-9px;right:8px;opacity:0;pointer-events:none;cursor:pointer;font-size:11px;color:var(--fg2);background:#2c2c2e;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;transition:.12s;font-family:inherit}
   .msg .bubble{position:relative}
@@ -236,7 +236,7 @@
 <div id="app">
   <header>
     <span id="live" class="dot"></span>
-    <span class="title">快速反应</span>
+    <span class="title">随叫随到</span>
     <span class="chips">
       <span class="chip">前台 <b id="fphase">—</b></span>
       <span class="chip">后台 <b id="bphase">—</b></span>
@@ -396,7 +396,7 @@
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
     var typing = running ? '<div class="msg typing"><span class="dots"><i></i><i></i><i></i></span>前台正在处理…</div>' : ''
     if (!rows.length){
-      box.innerHTML = typing || '<div class="empty"><div class="empty-title">快速反应</div></div>'
+      box.innerHTML = typing || '<div class="empty"><div class="empty-title">随叫随到</div></div>'
       if (atBottom) box.scrollTop = box.scrollHeight
       return
     }
