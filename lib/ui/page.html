@@ -448,7 +448,7 @@
     <div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b><span id="errTxt"></span></div>
     <footer>
       <div class="composer">
-        <div id="fileChips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:7px"></div>
+        <div id="fileChips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:7px;align-items:center"></div>
         <textarea id="input" placeholder="发消息或创建任务..."></textarea>
         <div class="bar">
           <span class="hint" id="hint">就绪</span>
@@ -1142,17 +1142,29 @@
         var chip = document.createElement('span')
         chip.className = 'file-chip'
         chip.title = p
+        // ★ 全部内联样式：避免被其它 CSS 覆盖成纯文本
+        chip.setAttribute('style', 'display:inline-flex;align-items:center;gap:6px;max-width:100%;' +
+          'padding:4px 8px 4px 9px;border-radius:8px;' +
+          'background:rgba(64,132,255,0.18);border:1px solid rgba(96,160,255,0.75);' +
+          'color:#8ab4ff;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;white-space:nowrap')
+        var ic = document.createElement('span')
+        ic.setAttribute('style', 'font-size:12px;line-height:1;opacity:.95')
+        ic.textContent = '\u{1F4C4}'
         var nm = document.createElement('span')
-        nm.className = 'nm'
+        nm.setAttribute('style', 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;color:#a8c8ff')
         nm.textContent = p.split(/[\\/]/).pop() || p
         var x = document.createElement('span')
-        x.className = 'x'; x.textContent = '✕'; x.title = '移除'
-        x.onclick = function(){ chip.remove(); if (!box.children.length) box.classList.remove('show') }
-        chip.appendChild(nm); chip.appendChild(x)
+        x.setAttribute('style', 'cursor:pointer;color:#6d9be0;font-size:12px;padding:0 3px;border-radius:4px;line-height:1')
+        x.textContent = '\u2715'; x.title = '移除'
+        x.onmouseenter = function(){ x.style.color = '#ff9a9a'; x.style.background = 'rgba(255,255,255,.1)' }
+        x.onmouseleave = function(){ x.style.color = '#6d9be0'; x.style.background = 'transparent' }
+        x.onclick = function(e){ e.stopPropagation(); e.preventDefault(); chip.remove(); if (!box.children.length) { box.classList.remove('show'); box.style.display = 'none' } }
+        chip.appendChild(ic); chip.appendChild(nm); chip.appendChild(x)
         chip.dataset.path = p
         box.appendChild(chip)
       })
       box.classList.add('show')
+      box.style.display = 'flex'      // ★ 内联兜底：确保真的显示
       try { ta.focus() } catch (e) {}
       toast('已添加 ' + paths.length + ' 个文件（蓝色标签，发送时一并带上）')
     }
@@ -1170,7 +1182,7 @@
     })
     window.__frClearFiles = function(){
       var box = document.getElementById('fileChips'); if (!box) return
-      box.innerHTML = ''; box.classList.remove('show')
+      box.innerHTML = ''; box.classList.remove('show'); box.style.display = 'none'
     }
     comp.addEventListener('dragenter', function(e){ e.preventDefault(); depth++; comp.classList.add('dragover') })
     comp.addEventListener('dragover', function(e){ e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy' } catch (err) {} })
