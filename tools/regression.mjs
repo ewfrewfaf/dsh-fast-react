@@ -62,6 +62,8 @@ const all = src + '\n' + mods
 const api = fs.readFileSync(root + '/lib/api.js', 'utf8')
 const page = fs.readFileSync(root + '/lib/ui/page.html', 'utf8')
 const codeChecks = {
+  '工具能力策略(解耦M13)': all.includes('WORK_TOOLS') && all.includes('isDeniedTool') && !/frontTools:\s*\[/.test(all),
+  '工具能力不按模式削减': /export function allowListFor[\s\S]{0,300}return WORK_TOOLS/.test(all),
   'wire() 统一接线': src.includes('const wire = (frontId, backId)'),
   'effort 显式传': src.includes('reasoningEffort: effortFor(tag)'),
   'BOM 已除': !fs.readFileSync(root + '/package.json').slice(0, 3).equals(Buffer.from([0xEF, 0xBB, 0xBF])),
