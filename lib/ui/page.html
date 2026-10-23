@@ -582,9 +582,11 @@
     try { toggleModelMenu(false); drawer(false); groupsOpen(false) } catch (err) { /* 忽略 */ }
   })
 
+  var lastBusy = false
   function load(){
-    api('/status').then(function(d){
+    return api('/status').then(function(d){
       renderHead(d); renderChat(d); renderTech(d)
+      lastBusy = !!((d.front && d.front.phase === 'running') || (d.back && d.back.phase === 'running'))
       var n = ((d.chat&&d.chat.front)||[]).length + ((d.chat&&d.chat.back)||[]).length
       if (n !== lastCount){ lastCount = n; $('hint').textContent = n ? (n+' 条消息') : '就绪' }
     }).catch(function(){
@@ -804,8 +806,19 @@
     try { if (window.parent && window.parent !== window) window.parent.postMessage({ fr: 'close' }, '*') } catch (err) {}
   })
 
-  load()
-  setInterval(load, 1000)
+  // ★ 自适应轮询（2026-10-24）：原来固定 1s、不管页面是否可见，白耗宿主主线程
+  //   隐藏 5s / 忙 900ms / 空闲 2.5s；请求链保证不叠加。
+  var pollTimer = null
+  function nextPoll(){
+    if (pollTimer) clearTimeout(pollTimer)
+    var ms = document.hidden ? 5000 : (lastBusy ? 900 : 2500)
+    pollTimer = setTimeout(function(){ load().then(nextPoll, nextPoll) }, ms)
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) load().then(nextPoll, nextPoll)
+    else nextPoll()
+  })
+  load().then(nextPoll, nextPoll)
 })();
 </script>
 <div id="frModeBox" style="position:fixed;right:12px;bottom:8px;z-index:9999;background:#232326;border:1px solid #333;border-radius:8px;padding:6px 8px;font:12px system-ui;color:#ddd;display:flex;gap:8px;align-items:center">
