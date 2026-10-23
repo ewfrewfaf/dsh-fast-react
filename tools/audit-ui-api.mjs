@@ -27,7 +27,7 @@ for (const [name, needle] of [
   ['复制按钮', 'class="copy"'],
   ['草稿保存', 'DRAFT_KEY'],
   ['Ctrl+K', "'k'"],
-  ['模板', 'TMPLS'],
+  ['空状态大字', 'empty-title'],
 ]) add('  └ ' + name, html.includes(needle))
 
 // 2) 不渲染后台消息（上次修的）

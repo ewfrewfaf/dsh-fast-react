@@ -63,7 +63,8 @@
   #chat{flex:1 1 auto;overflow:auto;padding:20px 22px 8px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:1040px;margin:0 auto}
   #chat::-webkit-scrollbar{width:10px}
   #chat::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
-  .empty{margin:auto;text-align:center;color:var(--muted);max-width:480px;line-height:2}
+  .empty{margin:auto;text-align:center;color:var(--muted);max-width:520px;line-height:2}
+  .empty-title{font-size:34px;font-weight:600;letter-spacing:2px;color:var(--fg2);opacity:.92}
   .empty b{color:var(--fg2);display:block;margin-bottom:10px;font-size:16px}
   .empty code{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px var(--mono);color:#d2a8ff}
 
@@ -94,9 +95,6 @@
   /* 可操作通知（T3 确认 / 哨兵 / 上交）：必须显眼，否则用户看不到卡点 */
   .notice{align-self:center;max-width:86%;font-size:12.5px;line-height:1.65;color:#e3c07b;background:rgba(227,192,123,.07);border:1px solid rgba(227,192,123,.28);border-radius:10px;padding:7px 13px;white-space:pre-wrap;word-break:break-word}
   /* 便捷功能：快捷模板 / 悬停复制 */
-  .tmpls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
-  .tmpl{cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--fg2);border-radius:999px;padding:6px 13px;font-size:12.5px;font-family:inherit;transition:.14s}
-  .tmpl:hover{background:rgba(255,255,255,.1);color:var(--fg);border-color:rgba(255,255,255,.2)}
   .copy{position:absolute;top:-9px;right:8px;opacity:0;pointer-events:none;cursor:pointer;font-size:11px;color:var(--fg2);background:#2c2c2e;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;transition:.12s;font-family:inherit}
   .msg .bubble{position:relative}
   .msg:hover .copy{opacity:1;pointer-events:auto}
@@ -398,7 +396,7 @@
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
     var typing = running ? '<div class="msg typing"><span class="dots"><i></i><i></i><i></i></span>前台正在处理…</div>' : ''
     if (!rows.length){
-      box.innerHTML = typing || '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行，<code>Ctrl+K</code> 聚焦输入框。' + tmplHtml() + '</div>'
+      box.innerHTML = typing || '<div class="empty"><div class="empty-title">快速反应</div></div>'
       if (atBottom) box.scrollTop = box.scrollHeight
       return
     }
@@ -648,23 +646,9 @@
   document.addEventListener('keydown', function(e){
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k'){ e.preventDefault(); $('input').focus() }
   })
-  var TMPLS = [
-    { t: '📊 汇报当前进度', v: '请读 .board/ 最新状态，用三句话汇报：已完成什么、卡在哪、下一步做什么。' },
-    { t: '▶️ 继续上次任务', v: '继续上次没做完的任务，读 state.md 和最新步骤，直接往下做。' },
-    { t: '🩺 自检', v: '做一次自检：前后台接线、黑板状态、最近一次工具失败原因，各用一行回答。' }
-  ]
-  function tmplHtml(){
-    return '<div class="tmpls">' + TMPLS.map(function(x, i){
-      return '<button class="tmpl" data-i="' + i + '">' + esc(x.t) + '</button>'
-    }).join('') + '</div>'
-  }
+
   $('chat').addEventListener('click', function(e){
     var t = e.target
-    if (t && t.classList && t.classList.contains('tmpl')){
-      var it = TMPLS[Number(t.getAttribute('data-i'))]
-      if (it){ $('input').value = it.v; saveDraft(); $('input').focus() }
-      return
-    }
     // 一键复制气泡文本
     if (t && t.classList && t.classList.contains('copy')){
       var txt = ''
