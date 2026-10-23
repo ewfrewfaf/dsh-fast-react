@@ -341,6 +341,28 @@
     .kv{font-size:12px}
     #events{max-height:160px}
   }
+
+  /* ── 技术面板：高信息密度（2026-10-24）──────────────────────────── */
+  #drawer .db{padding:10px 13px 14px}
+  /* 区块标题更紧、更小 */
+  #drawer .db h4{margin:0 0 5px;font-size:10.5px;letter-spacing:.5px}
+  #drawer .db h4{margin-top:10px}
+  #drawer .db > h4:first-child{margin-top:0}
+  /* 键值行：行高与间距压缩 */
+  .kv{gap:2px 10px;font-size:12px;line-height:1.45}
+  .kv > div{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 步骤 chip 更小更紧 */
+  .steps{gap:4px;margin-top:6px !important}
+  .steps .st,.steps > *{font-size:11px;padding:1px 6px}
+  /* 操作区按钮与配置行紧凑 */
+  #drawer .db button{padding:4px 10px;font-size:12px;border-radius:8px}
+  #drawer .cfgrow{margin-top:8px;gap:6px 8px}
+  #drawer .cfgrow input{padding:4px 8px;font-size:12px}
+  /* 事件流：更紧、稍高，单行更短 */
+  #events{font-size:11px;line-height:1.55;max-height:260px}
+  #events > div{padding:1px 0}
+  /* 抽屉略加宽，一行放更多 */
+  #drawer{width:min(468px,94vw)}
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
