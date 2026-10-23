@@ -222,6 +222,25 @@
     .composer{padding:10px 10px 6px}
     .composer textarea{min-height:44px;font-size:13.5px}
   }
+
+  /* ── 极窄：模式按钮可见性保障（2026-10-24）─────────────────────────── */
+  @media (max-width: 560px){
+    /* 让「发送即打断」只留开关本体，把宽度让给模式/模型按钮 */
+    .switch .sw-lbl{display:none}
+    .composer .bar .grow{flex:1 1 0;min-width:0}
+    #btnMode{flex:0 0 auto;min-width:64px;max-width:104px}
+    #btnModel{flex:0 0 auto;min-width:0;max-width:112px}
+    #frModeLockMark{display:none}          /* 锁定在菜单里也能切 */
+    #send{flex:0 0 auto}
+    .composer .bar{overflow:visible}
+  }
+  @media (max-width: 440px){
+    /* 再窄就把操作排到第二行，绝不裁切 */
+    .composer .bar{flex-wrap:wrap;row-gap:6px;gap:6px}
+    .composer .bar .grow{display:none}
+    #btnMode{margin-left:auto}
+    #btnModel{max-width:104px}
+  }
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
