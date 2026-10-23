@@ -125,7 +125,7 @@
   #btnModel,#btnMode{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #btnModel:hover,#btnMode:hover{background:rgba(255,255,255,.07);color:var(--fg)}
   #btnModel .caret,#btnMode .caret{font-size:10px;opacity:.7}
-  #modelMenu,#frModeMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #modelMenu,#frModeMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
   #modelMenu.show,#frModeMenu.show{display:block}
   #modelMenu .grp,#frModeMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #modelMenu .op,#frModeMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
@@ -240,14 +240,14 @@
     #btnModel{max-width:104px}
   }
 
-  #modelMenu .role-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);color:var(--fg2);border-radius:9px;padding:6px 14px;font-size:12.5px;cursor:pointer;min-height:30px;line-height:1}
+  #modelMenu .role-btn{background:rgba(255,255,255,.06);border:0;color:var(--fg2);border-radius:9px;padding:6px 14px;font-size:12.5px;cursor:pointer;min-height:30px;line-height:1}
   #modelMenu .role-btn:hover{background:rgba(255,255,255,.11);color:var(--fg)}
-  #modelMenu .role-btn.cur{color:#7aaaff;border-color:rgba(122,170,255,.6);background:rgba(122,170,255,.14)}
+  #modelMenu .role-btn.cur{color:#7aaaff;background:rgba(122,170,255,.18)}
   #modelMenu .op{cursor:pointer;min-height:30px}
   #modelMenu .op[style*="cursor:default"]{cursor:default !important}
 
   /* 权限菜单（与模型菜单同款外观） */
-  #permMenu{position:fixed;display:none;z-index:60;min-width:240px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+  #permMenu{position:fixed;display:none;z-index:60;min-width:240px;max-height:320px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
   #permMenu.show{display:block}
   #permMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
   #permMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
@@ -640,12 +640,17 @@
     var op = e.target && e.target.closest ? e.target.closest('.op') : null
     if (!op || !op.dataset.m) return
     var p = op.dataset.p, m = op.dataset.m
-    toggleModelMenu(false)
     api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m, role: modelRole }) })
-      .then(function(){ modelCache = null; toast('模型已切换（' + (modelRole === 'both' ? '前后台' : modelRole === 'front' ? '前台' : '后台') + '）：' + p + '/' + m); load() })
+      .then(function(){
+        modelCache = null
+        toast('模型已切换（' + (modelRole === 'both' ? '前后台' : modelRole === 'front' ? '前台' : '后台') + '）：' + p + '/' + m)
+        // 菜单保持打开，方便继续给另一角色选
+        loadModels().then(function(mm){ renderModelMenu(mm) })
+        load()
+      })
       .catch(function(err){ toast('切换失败：' + err.message, true) })
   }
-  document.addEventListener('click', function(){ if (modelOpen) toggleModelMenu(false) })
+  document.addEventListener('click', function(e){ if (!modelOpen) return; var t = e.target; if (t && t.closest && (t.closest('#modelMenu') || t.closest('#btnModel'))) return; toggleModelMenu(false) })
 
 
   // ★ Phase 6：点空白关闭（抽屉/会话组/模型菜单）+ ESC
