@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>快速反应</title>
+<title>随叫随到</title>
 <style>
   :root{
     /* ══ DSH 官方主题 token（--dsw-alias-*）：同源 iframe 内由底部脚本从父页面
@@ -57,13 +57,20 @@
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   button.primary:hover:not(:disabled){filter:brightness(1.12)}
   button.ghost{background:transparent}
-  button.icon{padding:6px 9px;font-size:14px;line-height:1}
+  button.icon{padding:0 9px;font-size:14px;line-height:1;height:22px;min-height:22px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
 
   main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative}
-  #chat{flex:1 1 auto;overflow:auto;padding:20px 22px 8px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:1040px;margin:0 auto}
-  #chat::-webkit-scrollbar{width:10px}
-  #chat::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
-  .empty{margin:auto;text-align:center;color:var(--muted);max-width:480px;line-height:2}
+  #chat{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding:20px 22px 8px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:1040px;margin:0 auto}
+  /* ★ 2026-10-24：滑条不再突兀——固定占位（scrollbar-gutter）避免内容跳动；
+     细滑条 + 半透明，悬停聊天区才加深；Firefox 用 scrollbar-width/color */
+  #chat{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+  #chat:hover{scrollbar-color:rgba(255,255,255,.3) transparent}
+  #chat::-webkit-scrollbar{width:10px;height:10px}
+  #chat::-webkit-scrollbar-track{background:transparent}
+  #chat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:6px;border:2px solid transparent;background-clip:content-box;transition:background .18s ease}
+  #chat:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
+  .empty{margin:auto;text-align:center;color:var(--muted);max-width:520px;line-height:2}
+  .empty-title{font-size:40px;font-weight:600;letter-spacing:20px;padding-left:20px;color:var(--fg2);opacity:.92;line-height:1.4;transform:translateY(-4%)}
   .empty b{color:var(--fg2);display:block;margin-bottom:10px;font-size:16px}
   .empty code{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px var(--mono);color:#d2a8ff}
 
@@ -94,9 +101,6 @@
   /* 可操作通知（T3 确认 / 哨兵 / 上交）：必须显眼，否则用户看不到卡点 */
   .notice{align-self:center;max-width:86%;font-size:12.5px;line-height:1.65;color:#e3c07b;background:rgba(227,192,123,.07);border:1px solid rgba(227,192,123,.28);border-radius:10px;padding:7px 13px;white-space:pre-wrap;word-break:break-word}
   /* 便捷功能：快捷模板 / 悬停复制 */
-  .tmpls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
-  .tmpl{cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--fg2);border-radius:999px;padding:6px 13px;font-size:12.5px;font-family:inherit;transition:.14s}
-  .tmpl:hover{background:rgba(255,255,255,.1);color:var(--fg);border-color:rgba(255,255,255,.2)}
   .copy{position:absolute;top:-9px;right:8px;opacity:0;pointer-events:none;cursor:pointer;font-size:11px;color:var(--fg2);background:#2c2c2e;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:2px 9px;transition:.12s;font-family:inherit}
   .msg .bubble{position:relative}
   .msg:hover .copy{opacity:1;pointer-events:auto}
@@ -124,16 +128,29 @@
   .composer .pill{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--fg2);border-radius:999px;padding:6px 14px;font-size:12.5px}
   .composer .pill:hover{background:rgba(255,255,255,.06);color:var(--fg);border-color:rgba(255,255,255,.22)}
   /* 模型切换器：DSH 同位置（输入栏右下、发送键左侧），透明底 8px 圆角 28px 高 */
-  #btnModel{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #btnModel:hover{background:rgba(255,255,255,.07);color:var(--fg)}
-  #btnModel .caret{font-size:10px;opacity:.7}
-  #modelMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
-  #modelMenu.show{display:block}
-  #modelMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
-  #modelMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
-  #modelMenu .op:hover{background:rgba(255,255,255,.08)}
-  #modelMenu .op.cur{color:#7aaaff}
-  #modelMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
+  #btnModel,#btnMode,#btnPerm{display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;background:transparent;border:0;border-radius:8px;color:var(--fg2);font-size:13px;cursor:pointer;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #btnModel:hover,#btnMode:hover,#btnPerm:hover{background:rgba(255,255,255,.07);color:var(--fg)}
+  #btnModel .caret,#btnMode .caret,#btnPerm .caret{font-size:10px;opacity:.7}
+  #modelMenu,#frModeMenu{position:absolute;right:56px;bottom:56px;min-width:260px;max-height:320px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #modelMenu.show,#frModeMenu.show{display:block}
+  #permQuickMenu{position:absolute;right:56px;bottom:56px;min-width:220px;max-height:300px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:none;z-index:30}
+  #permQuickMenu.show{display:block}
+  /* 三个下拉菜单统一细滚动条（与聊天区一致，避免突兀系统粗条） */
+  #modelMenu::-webkit-scrollbar,#frModeMenu::-webkit-scrollbar,#permQuickMenu::-webkit-scrollbar{width:8px}
+  #modelMenu::-webkit-scrollbar-track,#frModeMenu::-webkit-scrollbar-track,#permQuickMenu::-webkit-scrollbar-track{background:transparent}
+  #modelMenu::-webkit-scrollbar-thumb,#frModeMenu::-webkit-scrollbar-thumb,#permQuickMenu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:5px;border:2px solid transparent;background-clip:content-box}
+  #modelMenu:hover::-webkit-scrollbar-thumb,#frModeMenu:hover::-webkit-scrollbar-thumb,#permQuickMenu:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.24);background-clip:content-box}
+  #modelMenu,#frModeMenu,#permQuickMenu{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+  #permQuickMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #permQuickMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #permQuickMenu .op:hover{background:rgba(255,255,255,.08)}
+  #permQuickMenu .op.cur{color:#7aaaff;background:rgba(122,170,255,.15)}
+  #modelMenu .grp,#frModeMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #modelMenu .op,#frModeMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #modelMenu .op:hover,#frModeMenu .op:hover{background:rgba(255,255,255,.08)}
+  #modelMenu .op.cur,#frModeMenu .op.cur{color:#7aaaff;background:rgba(122,170,255,.15)}
+  #frModeTip{position:fixed;z-index:60;display:none;max-width:300px;padding:8px 10px;background:#1b1b1e;border:1px solid rgba(255,255,255,.14);border-radius:10px;font:12px/1.55 system-ui;color:#ddd;box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;white-space:normal}
+  #modelMenu .op .badge,#frModeMenu .op .badge{margin-left:auto;font-size:10.5px;color:var(--muted)}
   .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:0;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;transition:.14s}
   .send:hover:not(:disabled){filter:brightness(1.12)}
   .send:disabled{opacity:.4;cursor:not-allowed}
@@ -141,18 +158,22 @@
   #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
   #mask.show{display:block}
   /* 会话组管理弹层 */
-  #groupsModal{position:absolute;top:56px;right:16px;bottom:80px;width:min(560px,92vw);background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
+  #groupsModal{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);width:min(780px,94vw);height:calc(100% - 300px);max-height:min(84vh,860px);min-height:240px;container-type:inline-size;container-name:gm;background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
   #groupsModal.show{display:flex}
   .gm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
   .gm-hint{font-size:11px;color:var(--muted)}
   .gm-new{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
   .gm-new input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:var(--fg);padding:7px 11px;font-size:13px;outline:none}
   .gm-new input:focus{border-color:rgba(122,170,255,.55)}
-  #gmList{flex:1 1 auto;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
-  .gm-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)}
+  #gmList{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+  #gmList::-webkit-scrollbar{width:9px}
+  #gmList::-webkit-scrollbar-track{background:transparent}
+  #gmList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  #gmList:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
+  .gm-row{display:flex;align-items:center;min-width:0;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)}
   .gm-row.active{border-color:rgba(122,170,255,.5);background:rgba(122,170,255,.08)}
   .gm-key{font:12px/1 var(--mono);color:#7aaaff;background:rgba(122,170,255,.12);border:1px solid rgba(122,170,255,.3);border-radius:7px;padding:5px 8px;flex:0 0 auto}
-  .gm-info{flex:1;min-width:0}
+  .gm-info{flex:1 1 auto;min-width:0;overflow:hidden}
   .gm-title{font-size:13px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gm-ids{font:10.5px/1.5 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gm-st{display:flex;gap:6px;flex:0 0 auto}
@@ -161,7 +182,7 @@
   .gm-dot.miss{color:#e06c75;border-color:rgba(224,108,117,.4);background:rgba(224,108,117,.08)}
   .gm-ops{display:flex;gap:6px;flex:0 0 auto}
   .gm-ops button{padding:4px 10px;font-size:12px;border-radius:8px}
-  .gm-perm{flex:0 0 auto;max-width:136px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg2);font-size:11.5px;padding:4px 6px;outline:none}
+  .gm-perm{flex:0 0 auto;max-width:168px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg2);font-size:11.5px;padding:4px 8px;outline:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
   .gm-perm:focus{border-color:rgba(122,170,255,.55);color:var(--fg)}
   .gm-foot{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted)}
   .gm-empty{padding:24px 10px;text-align:center;color:var(--muted);font-size:12.5px}
@@ -195,6 +216,186 @@
   body.embed header{padding:8px 14px}
   body.embed #chat{padding:16px 18px 6px}
   body.embed footer{padding:8px 14px 12px}
+
+  /* ── 极窄窗口适配（DSH 侧栏拖到最窄时；按容器宽度逐级降级） ───────────── */
+  @media (max-width: 560px){
+    header{padding:0 10px;gap:6px;height:auto;min-height:26px;flex-wrap:nowrap;overflow:hidden}
+    header .title{font-size:12.5px;letter-spacing:0;white-space:nowrap}
+    header .chips{gap:4px;min-width:0;overflow:hidden;flex-wrap:nowrap}
+    header .chip{padding:1px 6px;font-size:10.5px}
+    header button{padding:2px 7px;font-size:11.5px}
+    header button.icon{padding:0 6px;height:20px;min-height:20px;font-size:13px}
+    .empty-title{font-size:28px;letter-spacing:8px;padding-left:8px;line-height:1.35;transform:none;white-space:nowrap}
+    .composer{padding:12px 13px 8px;border-radius:22px}
+    .composer .bar{gap:5px;flex-wrap:nowrap;overflow:hidden}
+    .composer .bar .hint{display:none}
+    #btnModel,#btnMode,#btnPerm{max-width:92px;padding:0 6px;font-size:12px}
+    #modelLabel,#frModeLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  }
+  @media (max-width: 440px){
+    header #fphase,header #bphase{display:none}      /* 前台/后台状态由左侧圆点+技术面板表达 */
+    header .chips .chip:first-child,header .chips .chip:nth-child(2){display:none}
+    .empty-title{font-size:22px;letter-spacing:6px;padding-left:6px}
+    .msg,.bubble{max-width:100% !important}
+  }
+  @media (max-width: 380px){
+    header .title{display:none}                       /* 极窄：只留状态点 + 操作按钮 */
+    .composer{padding:10px 10px 6px}
+    .composer textarea{min-height:44px;font-size:13.5px}
+  }
+
+  /* ── 极窄：模式按钮可见性保障（2026-10-24）─────────────────────────── */
+  @media (max-width: 560px){
+    /* 让「发送即打断」只留开关本体，把宽度让给模式/模型按钮 */
+    .switch .sw-lbl{display:none}
+    .composer .bar .grow{flex:1 1 0;min-width:0}
+    #btnMode{flex:0 0 auto;min-width:64px;max-width:104px}
+    #btnModel{flex:0 0 auto;min-width:0;max-width:112px}
+    #frModeLockMark{display:none}          /* 锁定在菜单里也能切 */
+    #send{flex:0 0 auto}
+    .composer .bar{overflow:visible}
+  }
+  @media (max-width: 440px){
+    /* 再窄就把操作排到第二行，绝不裁切 */
+    .composer .bar{flex-wrap:wrap;row-gap:6px;gap:6px}
+    .composer .bar .grow{display:none}
+    #btnMode{margin-left:auto}
+    #btnModel{max-width:104px}
+  }
+
+  #modelMenu .role-btn{background:rgba(255,255,255,.06);border:0;color:var(--fg2);border-radius:9px;padding:6px 14px;font-size:12.5px;cursor:pointer;min-height:30px;line-height:1}
+  #modelMenu .role-btn:hover{background:rgba(255,255,255,.11);color:var(--fg)}
+  #modelMenu .role-btn.cur{color:#7aaaff;background:rgba(122,170,255,.15)}
+  #modelMenu .op{cursor:pointer;min-height:30px}
+  #modelMenu .op[style*="cursor:default"]{cursor:default !important}
+
+  /* 权限菜单（与模型菜单同款外观） */
+  #permMenu{position:fixed;display:none;z-index:60;min-width:240px;max-height:320px;overflow:auto;background:#2c2c2e;border:0;border-radius:14px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+  #permMenu.show{display:block}
+  #permMenu .grp{padding:6px 10px 3px;font-size:11px;color:var(--muted);letter-spacing:.3px}
+  #permMenu .op{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap}
+  #permMenu .op:hover{background:rgba(255,255,255,.08)}
+  .gm-perm.perm-btn{cursor:pointer;text-align:left;font:12px system-ui;color:var(--fg);padding:4px 8px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
+
+  /* 模型 chip 窄屏：保留但省略（title 里是完整前后台） */
+  @media (max-width: 560px){ #modelChip{max-width:100%;overflow:hidden;text-overflow:ellipsis} #modelTxt{display:inline-block;max-width:180px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom} }
+
+  /* ── 窄屏：模式/模型按钮折叠为小按钮（保持单行，不再换行错位）────────── */
+  @media (max-width: 560px){
+    .composer .bar{flex-wrap:nowrap !important;gap:4px}
+    .composer .bar .grow{display:block;flex:1 1 0;min-width:0}
+    #btnMode{flex:0 1 auto;min-width:0;max-width:88px;padding:0 4px;gap:3px}
+    #btnModel{flex:0 1 auto;min-width:0;max-width:104px;padding:0 4px;gap:3px}
+    #frModeLabel,#modelLabel,#permLabel{max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+    #frModeLockMark{display:none}
+    .composer .bar .switch{padding:0}
+  }
+  @media (max-width: 440px){
+    /* 极窄：文字全收起，只剩 ▾ 小按钮（悬停 title 显示当前模式/模型） */
+    .composer .bar{flex-wrap:nowrap !important}
+    #btnModel,#btnMode,#btnPerm{max-width:34px;min-width:26px;padding:0 4px;justify-content:center}
+    #frModeLabel,#modelLabel,#permLabel{display:none}
+    #btnModel .caret,#btnMode .caret,#btnPerm .caret{font-size:11px;opacity:.85}
+    #send{padding:0 10px}
+  }
+
+  /* 会话组管理：按「弹层宽度」重排（容器查询，宽屏一行 / 窄屏两行） */
+  .gm-new{flex-wrap:nowrap}
+  .gm-new #gmTitle{flex:1 1 auto;min-width:120px}
+  .gm-new #gmDefaultPermBtn{flex:0 0 auto;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gm-new > button{flex:0 0 auto;white-space:nowrap}
+  .gm-row{flex-wrap:nowrap}
+  @container gm (max-width: 720px){
+    .gm-new{flex-wrap:wrap;gap:6px}
+    .gm-new #gmTitle{flex:1 1 100%;text-align:center}
+    .gm-new #gmDefaultPermBtn{flex:1 1 100%;max-width:none;text-align:center}
+    .gm-new > button{flex:1 1 auto;justify-content:center}
+    .gm-row{flex-wrap:wrap;row-gap:8px}
+    .gm-row .gm-info{flex:1 1 calc(100% - 70px);order:1}
+    .gm-row .gm-st{order:2;margin-left:auto}
+    .gm-row .gm-perm{order:3;flex:1 1 auto;max-width:none;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gm-row .gm-ops{order:4}
+  }
+
+  /* ── 技术面板 UI 优化（2026-10-24）────────────────────────────────── */
+  #drawer .dh{padding:12px 16px;background:rgba(255,255,255,.02)}
+  #drawer .dh b{font-size:13.5px;letter-spacing:.3px}
+  #drawer .db{padding:14px 16px 20px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+  #drawer .db:hover{scrollbar-color:rgba(255,255,255,.28) transparent}
+  #drawer .db::-webkit-scrollbar{width:9px}
+  #drawer .db::-webkit-scrollbar-track{background:transparent}
+  #drawer .db::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  #drawer .db:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
+  /* 区块标题：小号灰色标签，右对齐一条细线 */
+  #drawer .db h4{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+  #drawer .db h4::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.07)}
+  #drawer .db .sep{display:none}          /* 用 h4 的下划线取代独立分隔线，减噪 */
+  #drawer .db h4{margin-top:16px}
+  #drawer .db > h4:first-child{margin-top:0}
+  /* 键值行 */
+  .kv{gap:6px 12px;font-size:12.5px;line-height:1.6}
+  .kv .k{color:var(--muted)}
+  /* 步骤 chip */
+  .steps .st,.steps span{font-size:11.5px}
+  /* 事件流 */
+  #events{font-size:11.5px;line-height:1.75;max-height:220px;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+  #events::-webkit-scrollbar{width:8px}
+  #events::-webkit-scrollbar-track{background:transparent}
+  #events::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:5px;border:2px solid transparent;background-clip:content-box}
+  /* 操作按钮统一胶囊 */
+  #drawer .db button{border-radius:9px;padding:6px 13px;font-size:12.5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--fg2);cursor:pointer;transition:.15s}
+  #drawer .db button:hover{background:rgba(255,255,255,.11);color:var(--fg)}
+  #drawer .cfgrow{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;margin-top:12px}
+  #drawer .cfgrow input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:var(--fg);padding:5px 9px;font-size:12.5px;width:100%;min-width:0}
+  @media (max-width: 440px){
+    #drawer{width:100%}
+    #drawer .db{padding:12px 12px 16px}
+    #drawer .db h4{font-size:10.5px}
+    .kv{font-size:12px}
+    #events{max-height:160px}
+  }
+
+  /* ── 技术面板：高信息密度（2026-10-24）──────────────────────────── */
+  #drawer .db{padding:10px 13px 14px}
+  /* 区块标题更紧、更小 */
+  #drawer .db h4{margin:0 0 5px;font-size:10.5px;letter-spacing:.5px}
+  #drawer .db h4{margin-top:10px}
+  #drawer .db > h4:first-child{margin-top:0}
+  /* 键值行：行高与间距压缩 */
+  .kv{gap:2px 10px;font-size:12px;line-height:1.45}
+  .kv > div{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 步骤 chip 更小更紧 */
+  .steps{gap:4px;margin-top:6px !important}
+  .steps .st,.steps > *{font-size:11px;padding:1px 6px}
+  /* 操作区按钮与配置行紧凑 */
+  #drawer .db button{padding:4px 10px;font-size:12px;border-radius:8px}
+  #drawer .cfgrow{margin-top:8px;gap:6px 8px}
+  #drawer .cfgrow input{padding:4px 8px;font-size:12px}
+  /* 事件流：更紧、稍高，单行更短 */
+  #events{font-size:11px;line-height:1.55;max-height:260px}
+  #events > div{padding:1px 0}
+  /* 抽屉略加宽，一行放更多 */
+  #drawer{width:min(468px,94vw)}
+
+  /* 全局报错条（2026-10-24）：页面 JS / API 出错时显示完整信息，便于排障 */
+  #errBar{display:none;margin:0 22px 8px;padding:9px 12px;background:rgba(58,29,31,.92);border:1px solid rgba(170,51,51,.7);border-radius:10px;color:#ffd9d9;font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;max-height:24vh;overflow:auto;white-space:pre-wrap;word-break:break-word;flex:0 0 auto}
+  #errBar.show{display:block}
+  #errBar b{color:#ff9a9a;margin-right:8px;display:block}
+  #errBar .x{float:right;cursor:pointer;color:#ffb3b3;margin-left:12px}
+
+  /* 拖放文件（2026-10-24） */
+  .composer.dragover{background:rgba(122,170,255,.12);box-shadow:inset 0 0 0 2px rgba(122,170,255,.65)}
+  .composer.dragover::after{content:"松手即添加文件路径";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#9ec1ff;pointer-events:none;border-radius:28px}
+  #dropHint{display:none;margin:0 22px 6px;padding:6px 10px;background:rgba(122,170,255,.12);border:1px dashed rgba(122,170,255,.5);border-radius:8px;font-size:12px;color:#9ec1ff}
+  #dropHint.show{display:block}
+
+  /* 拖入的文件路径：蓝色标签（2026-10-24） */
+  #fileChips{display:none}
+  #fileChips.show{display:flex}
+  .file-chip{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 6px 3px 9px;background:rgba(122,170,255,.16);border:1px solid rgba(122,170,255,.55);border-radius:7px;color:#8fbaff;font:11.5px/1.4 ui-monospace,Consolas,monospace}
+  .file-chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+  .file-chip .x{cursor:pointer;color:#6d9be0;font-size:11px;padding:0 2px;border-radius:3px}
+  .file-chip .x:hover{color:#ff9a9a;background:rgba(255,255,255,.08)}
 </style>
 <script>
 /* 从父页面（DSH 主界面）同步官方主题 token —— 同源 iframe 可直接读父文档计算样式。
@@ -234,15 +435,15 @@
 </script>
 </head>
 <body>
+
 <div id="app">
   <header>
     <span id="live" class="dot"></span>
-    <span class="title">快速反应</span>
+    <span class="title">随叫随到</span>
     <span class="chips">
       <span class="chip">前台 <b id="fphase">—</b></span>
       <span class="chip">后台 <b id="bphase">—</b></span>
       <span class="chip" id="modelChip" style="display:none">模型 <b id="modelTxt">—</b></span>
-      <span class="chip" id="permChip" style="display:none">权限 <b id="permTxt">—</b></span>
     </span>
     <span class="grow"></span>
     <button id="btnGroups" class="icon" title="会话组管理">▦</button>
@@ -253,14 +454,15 @@
 
   <main>
     <div id="chat">
-      <div class="empty">
-        <b>跟你的前台 Agent 说点什么</b>
-        发一句任务描述，它会立刻开干；复杂任务会自动拉后台规划。<br/>
-        按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行。
-      </div>
+      <div class="empty"><div class="empty-title">随叫随到</div></div>
     </div>
+    <!-- 报错条：位于对话区下方、输入框上方 -->
+    <div id="errBar"><span class="x" onclick="document.getElementById('errBar').classList.remove('show')">✕ 关闭</span><b>页面报错</b><span id="errTxt"></span></div>
+    <!-- T3 破坏性操作审批卡（用户可见） -->
+    <div id="t3Box" style="display:none;margin:0 22px 8px"></div>
     <footer>
       <div class="composer">
+        <div id="fileChips" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:7px;align-items:center"></div>
         <textarea id="input" placeholder="发消息或创建任务..."></textarea>
         <div class="bar">
           <span class="hint" id="hint">就绪</span>
@@ -272,9 +474,13 @@
           </label>
           <span class="grow"></span>
           <button id="btnModel" title="切换模型"><span id="modelLabel">模型</span><span class="caret">▾</span></button>
+<button id="btnPerm" title="设置前后台权限"><span id="permLabel">权限</span><span class="caret">▾</span></button>
+          <button id="btnMode" title="切换任务模式"><span id="frModeLabel">模式</span><span class="caret">▾</span><span id="frModeLockMark" style="font-size:10px;opacity:.8"></span></button>
           <button id="send" class="send" title="发送 (Enter)">↑</button>
         </div>
         <div id="modelMenu"></div>
+        <div id="frModeMenu"></div>
+        <div id="permQuickMenu"></div>
       </div>
     </footer>
 
@@ -289,7 +495,7 @@
       </div>
       <div class="gm-new">
         <input id="gmTitle" placeholder="标题（可选），例如：桌面整理" maxlength="60" />
-        <select id="gmDefaultPerm" title="新建会话组的默认权限（沙箱模式 + 审批策略）"></select>
+        <button id="gmDefaultPermBtn" class="perm-btn gm-perm" data-def="1" title="新建会话组的默认权限（沙箱模式 + 审批策略）">新建默认：跟随 DSH ▾</button>
         <button id="btnGroupCreate" class="primary">新建</button>
         <button id="btnGroupAdopt" class="ghost" title="把当前已接线的前后台直接收编成一个组（不新建会话）">收编当前</button>
         <button id="btnGroupRepair" class="ghost" title="重建丢失会话 / 纠正编号 / 重新挂到工作区">自愈</button>
@@ -297,6 +503,7 @@
       <div id="gmList"></div>
       <div class="gm-foot">每组 = 前台 + 后台两个会话，全部挂在「快速反应」工作区下，可在 DSH 侧边栏直接打开。</div>
     </div>
+    <div id="permMenu"></div>
     <aside id="drawer">
       <div class="dh">
         <b style="font-size:13px">技术面板</b>
@@ -304,6 +511,18 @@
         <button id="btnCloseDrawer" class="ghost" style="padding:4px 9px">关闭</button>
       </div>
       <div class="db">
+        <!-- 操作与配置：置顶（常用操作不用滚到底） -->
+        <h4>操作与配置</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btnRebuild">重建会话</button>
+          <button id="btnCfg">保存限额</button>
+        </div>
+        <div class="cfgrow">
+          <span style="font-size:12px;color:var(--fg2)">前台上限</span>
+          <input id="cFront" type="number" min="1000" step="1000" />
+          <span style="font-size:12px;color:var(--fg2)">后台上限</span>
+          <input id="cBack" type="number" min="1000" step="1000" />
+        </div>
         <h4>任务进度</h4>
         <div class="kv" id="progBox"></div>
         <div class="steps" id="steps" style="margin-top:9px"></div>
@@ -322,18 +541,6 @@
         <div class="sep"></div>
         <h4>事件流</h4>
         <div id="events"></div>
-        <div class="sep"></div>
-        <h4>操作与配置</h4>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="btnRebuild">重建会话</button>
-          <button id="btnCfg">保存限额</button>
-        </div>
-        <div class="cfgrow">
-          <span style="font-size:12px;color:var(--fg2)">前台上限</span>
-          <input id="cFront" type="number" min="1000" step="1000" />
-          <span style="font-size:12px;color:var(--fg2)">后台上限</span>
-          <input id="cBack" type="number" min="1000" step="1000" />
-        </div>
       </div>
     </aside>
   </main>
@@ -347,13 +554,53 @@
   if (EMBED) document.body.classList.add('embed')
   var lastChatKey = '', lastCount = 0
 
+  // ── 全局报错展示（不吞错）─────────────────────────────────────────────
+  var _errSeen = {}
+  function showErr(kind, msg, extra){
+    try {
+      var key = kind + '|' + msg
+      if (_errSeen[key]) return             // 同样的错只报一次，避免刷屏
+      _errSeen[key] = 1
+      var bar = $('errBar'), txt = $('errTxt')
+      if (!bar || !txt) return
+      var line = '[' + new Date().toLocaleTimeString() + '] ' + kind + ': ' + msg
+      if (extra) line += '\n' + extra
+      txt.textContent = (txt.textContent ? txt.textContent + '\n' : '') + line
+      bar.classList.add('show')
+      try { console.error('[快速反应]', kind, msg, extra || '') } catch (e) {}
+    } catch (e) {}
+  }
+  window.addEventListener('error', function(e){
+    showErr('JS 错误', (e && e.message) || '未知错误', (e && e.filename ? e.filename + ':' + e.lineno + ':' + e.colno : ''))
+  })
+  window.addEventListener('unhandledrejection', function(e){
+    var r = e && e.reason
+    showErr('未处理的 Promise', (r && (r.message || r)) || '未知', (r && r.stack ? String(r.stack).split('\n').slice(0, 3).join('\n') : ''))
+  })
+
   function toast(msg, isErr){
     var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : '')
     clearTimeout(toast._t); toast._t = setTimeout(function(){ t.className = 'toast' }, 2600)
   }
   function api(path, opts){
-    return fetch('/fr/api' + path, Object.assign({ headers:{ 'content-type':'application/json' }, credentials:'same-origin' }, opts||{}))
-      .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error || ('HTTP '+r.status)); return j }) })
+    var url = '/fr/api' + path
+    return fetch(url, Object.assign({ headers:{ 'content-type':'application/json' }, credentials:'same-origin' }, opts||{}))
+      .then(function(r){
+        return r.text().then(function(txt){
+          var j = null
+          try { j = txt ? JSON.parse(txt) : {} } catch (e) {
+            // 非 JSON（多半是 500 崩溃页或代理错误）→ 把原文截断展示
+            throw new Error('HTTP ' + r.status + ' ' + (r.statusText || '') + ' · 响应不是 JSON: ' + String(txt || '').slice(0, 300))
+          }
+          if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status + ' ' + (r.statusText || '')))
+          return j || {}
+        })
+      })
+      .catch(function(err){
+        // 网络层失败（服务未起 / fetch failed）也统一带上网址
+        if (err && err.name === 'TypeError') throw new Error('请求失败 ' + url + '：' + (err.message || '网络错误'))
+        throw err
+      })
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c] }) }
   function fmtMs(ms){ return ms==null ? '—' : (ms<1000 ? Math.round(ms)+'ms' : (ms/1000).toFixed(1)+'s') }
@@ -394,7 +641,7 @@
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
     var typing = running ? '<div class="msg typing"><span class="dots"><i></i><i></i><i></i></span>前台正在处理…</div>' : ''
     if (!rows.length){
-      box.innerHTML = typing || '<div class="empty"><b>发消息开始</b>说一句任务描述就会开干。<br/>按 <code>Enter</code> 发送，<code>Shift+Enter</code> 换行，<code>Ctrl+K</code> 聚焦输入框。' + tmplHtml() + '</div>'
+      box.innerHTML = typing || '<div class="empty"><div class="empty-title">随叫随到</div></div>'
       if (atBottom) box.scrollTop = box.scrollHeight
       return
     }
@@ -484,62 +731,209 @@
     else if (w.state === 'unwired' || w.state === 'disabled'){ $('live').className = 'dot' }
     if (d.models && d.models.model){
       $('modelChip').style.display=''
-      $('modelTxt').textContent = d.models.model
-      $('modelLabel').textContent = d.models.model            // 输入栏右下模型切换器标签
+      // 前后台模型分别显示（同一模型时仍带前缀，避免"只显示一个"的误解）
+      var fm = (d.models.front && d.models.front.model) || d.models.model
+      var bm = (d.models.back && d.models.back.model) || d.models.model
+      var fp = (d.models.front && d.models.front.provider) || d.models.provider || ''
+      var bp = (d.models.back && d.models.back.provider) || d.models.provider || ''
+      var act = d.models.actual || {}
+      if (act.front || act.back){
+        modelSel.front = act.front || { provider: fp, model: fm }
+        modelSel.back = act.back || { provider: bp, model: bm }
+        modelSel.both = modelSel.front
+        // 顶部显示也用实际生效的模型
+        fm = modelSel.front.model; bm = modelSel.back.model
+        fp = modelSel.front.provider || fp; bp = modelSel.back.provider || bp
+        var lab2 = (typeof modelLabel === 'function') ? modelLabel : function(x){ return x }
+        $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + lab2(fm)) : ('前台 ' + lab2(fm) + ' · 后台 ' + lab2(bm))
+        $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
+        $('modelLabel').textContent = lab2(fm)
+      } else {
+        modelSel.both = { provider: d.models.provider || fp, model: fm }
+        modelSel.front = { provider: fp, model: fm }
+        modelSel.back = { provider: bp, model: bm }
+      }
+      var labOf = (typeof modelLabel === 'function') ? modelLabel : function(x){ return x }
+      $('modelTxt').textContent = (fm === bm) ? ('前后台 ' + labOf(fm)) : ('前台 ' + labOf(fm) + ' · 后台 ' + labOf(bm))
+      $('modelChip').title = '前台：' + fp + ' / ' + fm + '\n后台：' + bp + ' / ' + bm
+      $('modelLabel').textContent = labOf(fm)                   // 输入栏右下模型切换器标签（友好名）
     }
-    if (d.permissions && (d.permissions.front || d.permissions.back)){
-      $('permChip').style.display=''
-      $('permTxt').textContent = (d.permissions.front || '—') + (d.permissions.back && d.permissions.back !== d.permissions.front ? ' / ' + d.permissions.back : '')
+    // ★ 模型/回合错误（余额不足、401、限流…）——必须在页面上看得见
+    if (d.lastError && d.lastError.message){
+      var em = String(d.lastError.message)
+      var friendly = em
+      if (/insufficient|balance|欠费|余额|quota|credit|402/i.test(em)) friendly = '账户余额不足或已欠费（请充值后重试）—— 原始信息：' + em
+      else if (/401|unauthorized|invalid.*key|api.?key/i.test(em)) friendly = '模型密钥无效或已过期（请重新登录/换 key）—— 原始信息：' + em
+      else if (/429|rate.?limit|too many/i.test(em)) friendly = '请求过于频繁被限流（稍后重试）—— 原始信息：' + em
+      showErr('模型调用失败（' + (d.lastError.role === 'front' ? '前台' : d.lastError.role === 'back' ? '后台' : '会话') + '）', friendly)
+      $('hint').textContent = '模型出错：' + (friendly.length > 40 ? friendly.slice(0, 40) + '…' : friendly)
     }
+    // ★ 模型/回合错误（余额不足、401、限流…）——必须在页面上看得见
+    if (d.lastError && d.lastError.message){
+      var em = String(d.lastError.message)
+      var friendly = em
+      if (/insufficient|balance|欠费|余额|quota|credit|402/i.test(em)) friendly = '账户余额不足或已欠费（请充值后重试）—— 原始信息：' + em
+      else if (/401|unauthorized|invalid.*key|api.?key/i.test(em)) friendly = '模型密钥无效或已过期（请重新登录/换 key）—— 原始信息：' + em
+      else if (/429|rate.?limit|too many/i.test(em)) friendly = '请求过于频繁被限流（稍后重试）—— 原始信息：' + em
+      showErr('模型调用失败（' + (d.lastError.role === 'front' ? '前台' : d.lastError.role === 'back' ? '后台' : '会话') + '）', friendly)
+      $('hint').textContent = '模型出错：' + (friendly.length > 40 ? friendly.slice(0, 40) + '…' : friendly)
+    }
+    // ★ 权限按钮标签同步（不再只靠 initPermMenu 的 15s 轮询）
+    try {
+      var pv = (d.permissions && (d.permissions.front || d.permissions.default)) || ''
+      var pl = document.getElementById('permLabel')
+      var PMAP = { 'read-only': '只读', 'workspace-write': '工作区可写', 'danger-full-access': '完全权限', '': '权限' }
+      if (pl) { pl.textContent = PMAP[pv] !== undefined ? PMAP[pv] : (pv || '权限'); try { localStorage.setItem('fr_perm', pv) } catch (e) {} }
+      var pb = document.getElementById('btnPerm'); if (pb) pb.title = '前后台权限：' + (PMAP[pv] || pv || '未知')
+    } catch (e) {}
     $('btnStop').disabled = !d.enabled
   }
 
   // ── 模型切换（DSH 同位置：输入栏右下、发送键左侧）────────────────────────
-  var modelCache = null, modelOpen = false
+  var modelCache = null, modelOpen = false, modelRole = 'both'
+  // 每个角色当前生效的模型（来自 /status 的 models.front/back；切换成功后立即更新，用于菜单高亮）
+  var modelSel = { both: null, front: null, back: null }
+  function pickSel(role){
+    var key = (role === 'front' || role === 'back') ? role : 'both'
+    return modelSel[key] || null
+  }
   function loadModels(){
     if (modelCache) return Promise.resolve(modelCache)
     return api('/models').then(function(m){ modelCache = m; return m }).catch(function(){ return { providers: [], current: {} } })
   }
+  // 常见模型的友好名（原始 id 仍显示在括号里，便于排障）
+  var MODEL_LABELS = {
+    'deepseek-flash': 'DeepSeek V4.1 Flash',
+    'deepseek-v4.1-flash': 'DeepSeek V4.1 Flash',
+    'deepseek-v4-pro': 'DeepSeek V4 Pro',
+    'deepseek-chat': 'DeepSeek Chat',
+    'hy3': '混元 3', 'hy3-preview': '混元 3',
+    'hy4': '混元 4', 'hy4-preview': '混元 4'
+  }
+  function modelLabel(mo){ return MODEL_LABELS[mo] || mo }
   function renderModelMenu(m){
-    var cur = (m.current && m.current.model) || ''
-    var html = ''
-    ;(m.providers || []).forEach(function(p){
+    var sels = (modelRole === 'both')
+      ? [modelSel.front, modelSel.back, modelSel.both].filter(Boolean)
+      : [pickSel(modelRole)].filter(Boolean)
+    if (!sels.length && m.current) sels = [{ provider: m.current.provider, model: m.current.model }]
+    function isSel(provider, mo){
+      return sels.some(function(x){ return x && x.model === mo && (!x.provider || x.provider === provider) })
+    }
+    var avail = (m.providers || []).filter(function(p){ return (p.models || []).length })
+    var unavail = (m.providers || []).filter(function(p){ return !(p.models || []).length })
+    // ★ 置顶副本（model-pin-top）：当前选中的模型排在最上面，方便快速确认/切换
+    var pinned = []
+    avail.forEach(function(p){
+      ;(p.models || []).forEach(function(mo){
+        if (isSel(p.provider, mo)) pinned.push({ provider: p.provider, model: mo })
+      })
+    })
+    var pinHtml = ''
+    if (pinned.length){
+      pinHtml = '<div class="grp">当前（置顶）</div>'
+      pinned.forEach(function(it){
+        var lab = modelLabel(it.model)
+        pinHtml += '<div class="op cur" data-p="' + esc(it.provider) + '" data-m="' + esc(it.model) + '">' +
+          '<span style="color:#7aaaff">▲</span>' + esc(lab) +
+          (lab !== it.model ? '<span class="badge">' + esc(it.model) + '</span>' : '') +
+          '<span class="badge">' + esc(it.provider) + '</span></div>'
+      })
+      pinHtml += '<div class="grp" style="opacity:.6">全部模型</div>'
+    }
+    var html = pinHtml
+    avail.forEach(function(p){
       html += '<div class="grp">' + esc(p.provider) + '</div>'
       ;(p.models || []).forEach(function(mo){
-        var isCur = mo === cur
-        html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' + esc(mo) + (isCur ? '<span class="badge">当前</span>' : '') + '</div>'
+        var isCur = isSel(p.provider, mo)
+        var lab = modelLabel(mo)
+        html += '<div class="op' + (isCur ? ' cur' : '') + '" data-p="' + esc(p.provider) + '" data-m="' + esc(mo) + '">' +
+          esc(lab) + (lab !== mo ? '<span class="badge">' + esc(mo) + '</span>' : '') +
+          (isCur ? '<span class="badge">当前</span>' : '') + '</div>'
       })
-      if (!(p.models || []).length) html += '<div class="op" style="color:var(--muted);cursor:default">（无可用模型列表）</div>'
     })
-    $('modelMenu').innerHTML = html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>'
+    if (unavail.length){
+      html += '<div class="grp" style="opacity:.75">不可用（没有模型列表）</div>'
+      unavail.forEach(function(p){
+        html += '<div class="op" style="color:var(--muted);cursor:default;opacity:.8">' + esc(p.provider) + '<span class="badge">不可用</span></div>'
+      })
+    }
+    // 先选"应用到哪个角色"（按钮加大，便于点击）
+    var roleRow = '<div class="grp" style="display:flex;align-items:center;gap:8px">应用到：'
+      + [['both','两者'],['front','前台'],['back','后台']].map(function(pair){
+          return '<button class="role-btn' + (modelRole===pair[0]?' cur':'') + '" data-role="' + pair[0] + '">' + pair[1] + '</button>'
+        }).join('')
+      + '</div>'
+    $('modelMenu').innerHTML = roleRow + (html || '<div class="op" style="color:var(--muted)">拿不到模型列表</div>')
   }
   function toggleModelMenu(force){
     var open = typeof force === 'boolean' ? force : !modelOpen
+    if (open && window.__frCloseOtherMenus) window.__frCloseOtherMenus('model')
     modelOpen = open
     if (open){
       loadModels().then(function(m){ renderModelMenu(m); $('modelMenu').classList.add('show') })
     } else $('modelMenu').classList.remove('show')
   }
+  document.addEventListener('fr:menu-others-open', function(ev){
+    if (ev && ev.detail && ev.detail.keep === 'model') return
+    if (modelOpen) { modelOpen = false; try { $('modelMenu').classList.remove('show') } catch (e) {} }
+  })
+  document.addEventListener('fr:menu-others-open', function(ev){
+    if (ev && ev.detail && ev.detail.keep === 'model') return
+    if (modelOpen) { modelOpen = false; try { $('modelMenu').classList.remove('show') } catch (e) {} }
+  })
   $('btnModel').onclick = function(e){ e.stopPropagation(); toggleModelMenu() }
   $('modelMenu').onclick = function(e){
+    // 角色选择（前台/后台/两者）
+    var roleEl = e.target && e.target.closest ? e.target.closest('[data-role]') : null
+    if (roleEl && roleEl.dataset.role){
+      e.stopPropagation()
+      modelRole = roleEl.dataset.role
+      renderModelMenu(modelCache || { providers: [], current: {} })
+      return
+    }
     var op = e.target && e.target.closest ? e.target.closest('.op') : null
     if (!op || !op.dataset.m) return
     var p = op.dataset.p, m = op.dataset.m
-    toggleModelMenu(false)
-    api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m }) })
-      .then(function(){ modelCache = null; toast('模型已切换：' + p + '/' + m); load() })
+    api('/model', { method: 'POST', body: JSON.stringify({ provider: p, model: m, role: modelRole }) })
+      .then(function(){
+        // 立即记住选择 → 高亮马上跟上；「两者」要同时刷新三个槽位，否则旧模型的蓝色会残留
+        var selNow = { provider: p, model: m }
+        if (modelRole === 'both') { modelSel.both = selNow; modelSel.front = selNow; modelSel.back = selNow }
+        else modelSel[modelRole] = selNow
+        toast('模型已切换（' + (modelRole === 'both' ? '前后台' : modelRole === 'front' ? '前台' : '后台') + '）：' + p + '/' + m)
+        renderModelMenu(modelCache || { providers: [], current: {} })
+        load()   // 异步刷新真实状态（以 /status 为准）
+      })
       .catch(function(err){ toast('切换失败：' + err.message, true) })
   }
-  document.addEventListener('click', function(){ if (modelOpen) toggleModelMenu(false) })
+  document.addEventListener('click', function(e){ if (!modelOpen) return; var t = e.target; if (t && t.closest && (t.closest('#modelMenu') || t.closest('#btnModel'))) return; toggleModelMenu(false) })
 
+
+  // ★ Phase 6：点空白关闭（抽屉/会话组/模型菜单）+ ESC
+  document.addEventListener('click', function(e){
+    var t = e.target
+    if (!t || !t.closest) return
+    try {
+      if ($('drawer').classList.contains('open') && !t.closest('#drawer') && !t.closest('#btnDrawer')) drawer(false)
+      if ($('groupsModal').classList.contains('show') && !t.closest('#groupsModal') && !t.closest('#btnGroups')) groupsOpen(false)
+    } catch (err) { /* 忽略 */ }
+  })
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return
+    try { toggleModelMenu(false); drawer(false); groupsOpen(false) } catch (err) { /* 忽略 */ }
+  })
+
+  var lastBusy = false
   function load(){
-    api('/status').then(function(d){
+    return api('/status').then(function(d){
       renderHead(d); renderChat(d); renderTech(d)
+      lastBusy = !!((d.front && d.front.phase === 'running') || (d.back && d.back.phase === 'running'))
       var n = ((d.chat&&d.chat.front)||[]).length + ((d.chat&&d.chat.back)||[]).length
       if (n !== lastCount){ lastCount = n; $('hint').textContent = n ? (n+' 条消息') : '就绪' }
-    }).catch(function(){
+    }).catch(function(err){
       $('live').className = 'dot'
-      $('hint').textContent = '连接失败'
+      $('hint').textContent = '连接失败：' + ((err && err.message) || '未知')
+      showErr('/status 轮询失败', (err && err.message) || '未知')
     })
   }
 
@@ -550,9 +944,13 @@
   }
   function sendTask(){
     var v = $('input').value.trim()
-    if (!v) return
+    var fps = (typeof window.__frFilePaths === 'function') ? window.__frFilePaths() : []
+    if (!v && !fps.length) return
+    if (!v) v = '请阅读以下文件：'
+    if (fps.length) v = v + '\n\n【附件文件】\n' + fps.map(function(p){ return '- ' + p }).join('\n')
     var interrupt = !!$('fireMode').checked
     $('input').value = ''
+    if (typeof window.__frClearFiles === 'function') window.__frClearFiles()
     try { localStorage.removeItem(DRAFT_KEY) } catch (err) {}
     sentHistory.push(v)
     if (sentHistory.length > 30) sentHistory.shift()
@@ -593,23 +991,9 @@
   document.addEventListener('keydown', function(e){
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k'){ e.preventDefault(); $('input').focus() }
   })
-  var TMPLS = [
-    { t: '📊 汇报当前进度', v: '请读 .board/ 最新状态，用三句话汇报：已完成什么、卡在哪、下一步做什么。' },
-    { t: '▶️ 继续上次任务', v: '继续上次没做完的任务，读 state.md 和最新步骤，直接往下做。' },
-    { t: '🩺 自检', v: '做一次自检：前后台接线、黑板状态、最近一次工具失败原因，各用一行回答。' }
-  ]
-  function tmplHtml(){
-    return '<div class="tmpls">' + TMPLS.map(function(x, i){
-      return '<button class="tmpl" data-i="' + i + '">' + esc(x.t) + '</button>'
-    }).join('') + '</div>'
-  }
+
   $('chat').addEventListener('click', function(e){
     var t = e.target
-    if (t && t.classList && t.classList.contains('tmpl')){
-      var it = TMPLS[Number(t.getAttribute('data-i'))]
-      if (it){ $('input').value = it.v; saveDraft(); $('input').focus() }
-      return
-    }
     // 一键复制气泡文本
     if (t && t.classList && t.classList.contains('copy')){
       var txt = ''
@@ -639,21 +1023,13 @@
   function renderGroups(d){
     var list = d.groups || []
     var perm = d.permission || { options: [] }
-    // 新建默认权限下拉（只初始化一次，之后只同步值）
-    var dsel = $('gmDefaultPerm')
-    if (dsel){
-      if (!dsel.getAttribute('data-init')){
-        dsel.setAttribute('data-init', '1')
-        dsel.innerHTML = '<option value="">新建默认：跟随 DSH</option>' + (perm.options || []).map(function(o){
-          return '<option value="' + esc(o.value) + '">新建默认：' + esc(o.name || o.value) + '</option>'
-        }).join('')
-        dsel.onchange = function(){
-          api('/config', { method: 'POST', body: JSON.stringify({ permissionPreset: dsel.value }) })
-            .then(function(){ toast('新建会话组默认权限：' + (dsel.value || '跟随 DSH')); loadGroups() })
-            .catch(function(e){ toast('保存失败：' + e.message, true) })
-        }
-      }
-      dsel.value = d.defaultPreset || ''
+    permCatalog = (perm.options || [])
+    // 新建默认权限按钮（点击弹出与模型切换同款的菜单）
+    var dbtn = $('gmDefaultPermBtn')
+    if (dbtn){
+      var dn = (perm.options || []).filter(function(o){ return o.value === (d.defaultPreset || '') })[0]
+      dbtn.textContent = '默认：' + (dn ? (dn.name || dn.value) : '跟随 DSH') + ' ▾'
+      dbtn.title = '新建会话组的默认权限（' + (dn ? (dn.name || dn.value) : '跟随 DSH') + '）'
     }
     if (!list.length){
       $('gmList').innerHTML = '<div class="gm-empty">还没有会话组，点上方「新建会话组」。</div>'
@@ -662,17 +1038,14 @@
     $('gmList').innerHTML = list.map(function(g){
       var cls = function(p){ return p === 'missing' ? 'miss' : (p === 'running' ? 'run' : '') }
       var f = g.frontPhase || 'missing', b = g.backPhase || 'missing'
-      var opts = (perm.options || []).map(function(o){
-        return '<option value="' + esc(o.value) + '"' + (o.value === (g.preset || '') ? ' selected' : '') + '>' + esc(o.name || o.value) + '</option>'
-      }).join('')
+      var pn = (perm.options || []).filter(function(o){ return o.value === (g.preset || '') })[0]
+      var permLabel = pn ? (pn.name || pn.value) : '跟随默认'
       return '<div class="gm-row ' + (g.active ? 'active' : '') + '">' +
         '<span class="gm-key">' + esc(g.key) + '</span>' +
         '<div class="gm-info"><div class="gm-title">' + esc(g.title || '') + (g.active ? ' <span style="color:#7aaaff;font-size:11px">· 当前</span>' : '') + '</div>' +
         '<div class="gm-ids">' + esc(String(g.frontId || '').slice(0, 28)) + ' / ' + esc(String(g.backId || '').slice(0, 28)) + '</div></div>' +
         '<div class="gm-st"><span class="gm-dot ' + cls(f) + '">F ' + esc(f) + '</span><span class="gm-dot ' + cls(b) + '">B ' + esc(b) + '</span></div>' +
-        '<select class="gm-perm" data-key="' + esc(g.key) + '" title="该组前后台的权限（沙箱模式 + 审批策略）；「跟随默认」= DSH 默认">' +
-          '<option value=""' + (g.preset ? '' : ' selected') + '>跟随默认</option>' + opts +
-        '</select>' +
+        '<button class="gm-perm perm-btn" data-key="' + esc(g.key) + '" title="该组前后台权限（沙箱 + 审批）；点击选择">' + esc(permLabel) + ' ▾</button>' +
         '<div class="gm-ops"><button class="ghost" data-act="switch" data-key="' + esc(g.key) + '">切换</button>' +
         '<button class="ghost" data-act="del" data-key="' + esc(g.key) + '">删除</button></div></div>'
     }).join('')
@@ -685,7 +1058,12 @@
       .then(function(r){ toast(okMsg); loadGroups(); return r })
       .catch(function(e){ toast('失败：' + e.message, true) })
   }
-  $('btnGroups').onclick = function(){ groupsOpen(true); loadGroups() }
+  $('btnGroups').onclick = function(e){
+    if (e && e.stopPropagation) e.stopPropagation()
+    var open = $('groupsModal').classList.contains('show')
+    if (open) { groupsOpen(false); return }   // 已打开 ⇒ 再点一次就关闭
+    groupsOpen(true); loadGroups()
+  }
   $('btnGroupsClose').onclick = function(){ groupsOpen(false) }
   $('btnGroupCreate').onclick = function(){
     var t = ($('gmTitle').value || '').trim()
@@ -726,19 +1104,49 @@
       })
     }
   })
-  // 权限下拉：选中即应用（沙箱模式 + 审批策略一起生效）
-  $('gmList').addEventListener('change', function(e){
+  // ── 权限切换：按钮 + 弹出菜单（与模型切换同款，2026-10-24）──────────────
+  var permCatalog = [], permTarget = null
+  function closePermMenu(){ var m = $('permMenu'); if (m) m.classList.remove('show') }
+  function openPermMenu(btn, target){
+    permTarget = target
+    var menu = $('permMenu'); if (!menu) return
+    var html = '<div class="grp">权限（沙箱 + 审批）</div><div class="op" data-v="">跟随 DSH</div>'
+    permCatalog.forEach(function(o){ html += '<div class="op" data-v="' + esc(o.value) + '">' + esc(o.name || o.value) + '</div>' })
+    menu.innerHTML = html
+    menu.classList.add('show')
+    var r = btn.getBoundingClientRect()
+    var top = r.bottom + 6
+    if (top + 220 > window.innerHeight) top = Math.max(8, r.top - 226)
+    menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 260)) + 'px'
+    menu.style.top = top + 'px'
+  }
+  document.addEventListener('click', function(e){
     var t = e.target
-    if (!t || !t.classList || !t.classList.contains('gm-perm')) return
-    var key = t.getAttribute('data-key'), preset = t.value
-    api('/groups', { method: 'POST', body: JSON.stringify({ action: 'policy', key: key, preset: preset }) })
-      .then(function(r){
-        var live = r && (r.frontPreset || r.backPreset)
-        toast('权限设为 ' + (preset || '跟随默认') + (live ? '（当前生效: ' + live + '）' : ''))
-        loadGroups()
-      })
-      .catch(function(err){ toast('设置权限失败：' + err.message, true); loadGroups() })
+    if (!t || !t.closest) return
+    var btn = t.closest('.perm-btn')
+    if (btn){
+      e.preventDefault(); e.stopPropagation()
+      var def = !!btn.dataset.def
+      openPermMenu(btn, def ? { kind: 'default' } : { kind: 'group', key: btn.dataset.key })
+      return
+    }
+    var op = t.closest('#permMenu .op')
+    if (op && permTarget){
+      var v = op.getAttribute('data-v') || ''
+      if (permTarget.kind === 'default'){
+        api('/config', { method: 'POST', body: JSON.stringify({ permissionPreset: v }) })
+          .then(function(){ toast('新建默认权限：' + (v || '跟随 DSH')); closePermMenu(); loadGroups() })
+          .catch(function(err){ toast('保存失败：' + err.message, true) })
+      } else {
+        api('/groups', { method: 'POST', body: JSON.stringify({ action: 'policy', key: permTarget.key, preset: v }) })
+          .then(function(r){ var live = r && (r.frontPreset || r.backPreset); toast('权限设为 ' + (v || '跟随默认') + (live ? '（当前生效: ' + live + '）' : '')); closePermMenu(); loadGroups(); load() })
+          .catch(function(err){ toast('设置权限失败：' + err.message, true); loadGroups() })
+      }
+      return
+    }
+    if (!t.closest('#permMenu') && !t.closest('.perm-btn')) closePermMenu()
   })
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePermMenu() })
 
   function drawer(open){
     $('drawer').classList.toggle('open', open)
@@ -754,8 +1162,284 @@
     try { if (window.parent && window.parent !== window) window.parent.postMessage({ fr: 'close' }, '*') } catch (err) {}
   })
 
-  load()
-  setInterval(load, 1000)
+  // ★ 自适应轮询（2026-10-24）：原来固定 1s、不管页面是否可见，白耗宿主主线程
+  //   隐藏 5s / 忙 900ms / 空闲 2.5s；请求链保证不叠加。
+  var pollTimer = null
+  function nextPoll(){
+    if (pollTimer) clearTimeout(pollTimer)
+    var ms = document.hidden ? 5000 : (lastBusy ? 900 : 2500)
+    pollTimer = setTimeout(function(){ load().then(nextPoll, nextPoll) }, ms)
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) load().then(nextPoll, nextPoll)
+    else nextPoll()
+  })
+  // ── 拖放文件到对话栏（写入绝对路径，前台可直接 read）──────────────────
+  ;(function initDnd(){
+    var comp = document.querySelector('.composer')
+    var ta = $('input')
+    if (!comp || !ta) return
+    var depth = 0
+    function absPath(f){
+      try { if (f.path) return f.path } catch (e) {}
+      try { if (window.__dshGetPathForFile) { var p = window.__dshGetPathForFile(f); if (p) return p } } catch (e) {}
+      try { if (window.electron && window.electron.getPathForFile) { var p2 = window.electron.getPathForFile(f); if (p2) return p2 } } catch (e) {}
+      return ''
+    }
+    // 把"可能是文件名"的输入解析成真实绝对路径（后端在桌面/下载/文档等目录查找）
+    function resolvePath(p){
+      return fetch('/fr/api/resolve-path', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: p }) })
+        .then(function(r){ return r.json() })
+        .then(function(j){ return (j && j.ok && j.path) ? { path: j.path, resolved: !!j.resolved } : { path: p, resolved: false, missing: true } })
+        .catch(function(){ return { path: p, resolved: false, missing: true } })
+    }
+    window.__frResolvePath = resolvePath
+    function insert(paths){
+      if (!paths.length) return
+      var box = document.getElementById('fileChips')
+      if (!box) return
+      Promise.all(paths.map(resolvePath)).then(function(list){
+        list.forEach(function(item){ addChip(box, item) })
+        box.classList.add('show')
+        box.style.display = 'flex'
+        try { ta.focus() } catch (e) {}
+        var miss = list.filter(function(x){ return x.missing }).length
+        toast('已添加 ' + list.length + ' 个文件' + (miss ? ('（' + miss + ' 个未找到，将按原样发送）') : ''))
+      })
+    }
+    function addChip(box, item){
+      var p = item.path
+      {
+        var chip = document.createElement('span')
+        chip.className = 'file-chip'
+        chip.title = p
+        // ★ 全部内联样式：避免被其它 CSS 覆盖成纯文本
+        chip.setAttribute('style', 'display:inline-flex;align-items:center;gap:6px;max-width:100%;' +
+          'padding:4px 8px 4px 9px;border-radius:8px;' +
+          'background:rgba(64,132,255,0.18);border:1px solid rgba(96,160,255,0.75);' +
+          'color:#8ab4ff;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;white-space:nowrap')
+        var ic = document.createElement('span')
+        ic.setAttribute('style', 'font-size:12px;line-height:1;opacity:.95')
+        ic.textContent = '\u{1F4C4}'
+        var nm = document.createElement('span')
+        nm.setAttribute('style', 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;color:#a8c8ff')
+        nm.textContent = p.split(/[\\/]/).pop() || p
+        var x = document.createElement('span')
+        x.setAttribute('style', 'cursor:pointer;color:#6d9be0;font-size:12px;padding:0 3px;border-radius:4px;line-height:1')
+        x.textContent = '\u2715'; x.title = '移除'
+        x.onmouseenter = function(){ x.style.color = '#ff9a9a'; x.style.background = 'rgba(255,255,255,.1)' }
+        x.onmouseleave = function(){ x.style.color = '#6d9be0'; x.style.background = 'transparent' }
+        x.onclick = function(e){ e.stopPropagation(); e.preventDefault(); chip.remove(); if (!box.children.length) { box.classList.remove('show'); box.style.display = 'none' } }
+        chip.appendChild(ic); chip.appendChild(nm); chip.appendChild(x)
+        chip.dataset.path = p
+        if (item.missing) { chip.style.borderColor = 'rgba(255,150,150,.8)'; chip.title = '未找到该文件：' + p }
+        box.appendChild(chip)
+      }
+    }
+    window.__frFilePaths = function(){
+      var box = document.getElementById('fileChips'); if (!box) return []
+      return Array.prototype.map.call(box.children, function(c){ return c.dataset.path }).filter(Boolean)
+    }
+    // 接收父页面转发的拖放文件（iframe 里常常收不到原生 drag 事件）
+    window.addEventListener('message', function(ev){
+      try {
+        var d = ev && ev.data
+        if (!d || !d.__frDropFiles || !d.__frDropFiles.length) return
+        insert(d.__frDropFiles)
+      } catch (e) {}
+    })
+    window.__frClearFiles = function(){
+      var box = document.getElementById('fileChips'); if (!box) return
+      box.innerHTML = ''; box.classList.remove('show'); box.style.display = 'none'
+    }
+    comp.addEventListener('dragenter', function(e){ e.preventDefault(); depth++; comp.classList.add('dragover') })
+    comp.addEventListener('dragover', function(e){ e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy' } catch (err) {} })
+    comp.addEventListener('dragleave', function(e){ e.preventDefault(); depth = Math.max(0, depth - 1); if (!depth) comp.classList.remove('dragover') })
+    comp.addEventListener('drop', function(e){
+      e.preventDefault(); depth = 0; comp.classList.remove('dragover')
+      var dt = e.dataTransfer
+      if (!dt) return
+      var out = []
+      // ① 优先文件
+      if (dt.files && dt.files.length){
+        for (var i = 0; i < dt.files.length; i++){
+          var f = dt.files[i]
+          var p = absPath(f)
+          out.push(p || f.name)
+        }
+      } else if (dt.getData){
+        // ② 从资源管理器拖文件有时只给 text/uri-list 或 text/plain
+        var txt = dt.getData('text/uri-list') || dt.getData('text/plain') || ''
+        txt.split(/\r?\n/).forEach(function(line){
+          line = String(line || '').trim()
+          if (!line || line.charAt(0) === '#') return
+          if (line.indexOf('file://') === 0){
+            try { out.push(decodeURIComponent(line.replace('file:///', '').replace(/\//g, '\\'))) } catch (er) { out.push(line) }
+          } else out.push(line)
+        })
+      }
+      if (!out.length){ toast('没有识别到文件（可能需要从资源管理器拖入）', true); return }
+      insert(out)
+    })
+    // 兜底：整页阻止默认打开文件，避免拖歪时浏览器直接跳转
+    window.addEventListener('dragover', function(e){ e.preventDefault() })
+    window.addEventListener('drop', function(e){ if (!e.target || !e.target.closest || !e.target.closest('.composer')) e.preventDefault() })
+  })();
+
+  // ── 权限快捷切换（输入栏「权限 ▾」）──────────────────────────────
+  ;(function initPermMenu(){
+    var btn = document.getElementById('btnPerm')
+    var menu = document.getElementById('permQuickMenu')
+    var label = document.getElementById('permLabel')
+    if (!btn || !menu) return
+    window.__frPermMenuInit = 1
+    var PERMS = [['read-only','只读'],['workspace-write','工作区可写'],['danger-full-access','完全权限'],['','跟随 DSH']]
+    var cur = '', open = false
+    function render(){
+      var h = '<div class="grp">前后台权限</div>'
+      PERMS.forEach(function(p){
+        h += '<div class="op' + (p[0] === cur ? ' cur' : '') + '" data-p="' + p[0] + '">' + p[1] + (p[0] === cur ? '<span class="badge" style="margin-left:auto;font-size:10.5px;color:var(--muted)">当前</span>' : '') + '</div>'
+      })
+      menu.innerHTML = h
+      var hit = PERMS.filter(function(p){ return p[0] === cur })[0]
+      label.textContent = hit ? hit[1] : '权限'
+      btn.title = '前后台权限：' + (hit ? hit[1] : cur || '未知')
+    }
+    function toggle(f){ open = typeof f === 'boolean' ? f : !open; if (open && window.__frCloseOtherMenus) window.__frCloseOtherMenus('perm'); menu.classList[open ? 'add' : 'remove']('show'); if (open) { try { cur = localStorage.getItem('fr_perm') || cur } catch (e) {} refresh() } }
+    document.addEventListener('fr:menu-others-open', function(ev){
+      if (ev && ev.detail && ev.detail.keep === 'perm') return
+      if (open) { open = false; try { menu.classList.remove('show') } catch (e) {} }
+    })
+    document.addEventListener('fr:menu-others-open', function(ev){
+      if (ev && ev.detail && ev.detail.keep === 'perm') return
+      if (open) { open = false; try { menu.classList.remove('show') } catch (e) {} }
+    })
+    btn.onclick = function(e){ e.stopPropagation(); toggle() }
+    menu.onclick = function(e){
+      var op = e.target && e.target.closest ? e.target.closest('.op') : null
+      if (!op) return
+      var preset = op.getAttribute('data-p') || ''
+      // 通过 groups/policy 应用到当前活跃组；没有组则写全局默认
+      fetch('/fr/api/groups').then(function(r){ return r.json() }).then(function(j){
+        var active = (j.groups || []).filter(function(g){ return g.active })[0]
+        if (active) {
+          return fetch('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: active.key, preset: preset }) })
+        }
+        return fetch('/fr/api/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ permissionPreset: preset }) })
+      }).then(function(){
+        cur = preset                       // ★ 立即记住，高亮马上跟上
+        try { localStorage.setItem('fr_perm', preset) } catch (e) {}
+        render()
+        toast('权限已设为 ' + (preset || '跟随 DSH'))
+        toggle(false); load()
+      })
+        .catch(function(){ toast('设置权限失败', true) })
+    }
+    document.addEventListener('click', function(e){
+      var t = e.target; if (!t || !t.closest) return
+      if (open && !t.closest('#permQuickMenu') && !t.closest('#btnPerm')) toggle(false)
+    })
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && open) toggle(false) })
+    function refresh(){
+      fetch('/fr/api/status').then(function(r){ return r.json() }).then(function(j){
+        var p = j.permissions || {}
+        cur = p.front || p.default || ''
+        render()
+      }).catch(function(){})
+    }
+    refresh(); setInterval(refresh, 15000)
+  })();
+
+  // ── 三个下拉菜单互斥：打开一个就广播让其它关掉自己 ────────────────
+  window.__frCloseOtherMenus = function(keep){
+    try { document.dispatchEvent(new CustomEvent('fr:menu-others-open', { detail: { keep: keep } })) } catch (e) {}
+  }
+
+  // ── T3 待批准卡片（每 2 秒拉一次）────────────────────────────────────
+  function renderT3(){
+    fetch('/fr/api/confirm', { cache: 'no-store' }).then(function(r){ return r.json() }).then(function(j){
+      var box = document.getElementById('t3Box'); if (!box) return
+      var list = (j && j.pending) || []
+      if (!list.length){ box.style.display = 'none'; box.innerHTML = ''; return }
+      box.style.display = 'block'
+      box.innerHTML = list.map(function(it){
+        return '<div style="padding:10px 12px;background:rgba(200,140,40,.12);border:1px solid rgba(230,170,60,.6);border-radius:10px;color:#f0d090;font:12px/1.6 ui-monospace,Consolas,monospace">' +
+          '<div style="font-weight:600;margin-bottom:6px;color:#ffd88a">⚠ 需要你批准的危险操作（' + it.id + '）</div>' +
+          '<div style="white-space:pre-wrap;word-break:break-all;max-height:120px;overflow:auto;margin-bottom:8px">' + esc(it.cmd) + '</div>' +
+          '<div style="display:flex;gap:8px">' +
+          '<button data-t3="ok" data-step="' + esc(it.id) + '" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(120,220,120,.6);background:rgba(60,180,80,.2);color:#9df0a9;cursor:pointer;font-size:12px">允许执行</button>' +
+          '<button data-t3="no" data-step="' + esc(it.id) + '" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(220,120,120,.6);background:rgba(180,60,60,.2);color:#ffb3b3;cursor:pointer;font-size:12px">拒绝</button>' +
+          '</div></div>'
+      }).join('')
+    }).catch(function(){})
+  }
+  document.addEventListener('click', function(e){
+    var t = e.target; if (!t || !t.dataset || !t.dataset.t3) return
+    var step = t.dataset.step, action = t.dataset.t3 === 'ok' ? 'approve' : 'reject'
+    fetch('/fr/api/confirm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: action, step: step }) })
+      .then(function(){ toast(action === 'approve' ? '已批准，前台可继续' : '已拒绝'); renderT3(); load() })
+      .catch(function(){ toast('操作失败', true) })
+  })
+  renderT3(); setInterval(renderT3, 2000)
+  load().then(nextPoll, nextPoll)
+})();
+</script>
+<script>
+// 模式选择器（2026-10-24：与「切换模型」同款按钮 + 弹出菜单；悬停 0.6s 显示简介）
+(function(){
+var fallback={quick:["速答","不编排：前台直接答，最多查一眼"],consult:["咨询","深度分析：后台可查资料，只产出 analysis.md，不写步骤"],retrieval:["检索","长检索：前台自己并行查，不惊动后台"],coding:["编码","标准编排：后台写路线+步骤，前台执行"]};
+var btn=document.getElementById("btnMode"),menu=document.getElementById("frModeMenu"),label=document.getElementById("frModeLabel"),mark=document.getElementById("frModeLockMark");
+if(!btn||!menu)return;
+var info={},cur="",locked=false,open=false,hoverTimer=null;
+for(var k in fallback) info[k]={label:fallback[k][0],summary:fallback[k][1]};
+var tip=document.createElement("div");tip.id="frModeTip";document.body.appendChild(tip);
+function api(p,o){return fetch(p,o).then(function(r){return r.json()})}
+function render(){
+  var h='<div class="grp">任务模式</div>';
+  for(var k in info){h+='<div class="op'+(k===cur?" cur":"")+'" data-k="'+k+'" data-tip="'+info[k].summary.replace(/"/g,"&quot;")+'">'+info[k].label+'<span class="badge">'+k+'</span></div>'}
+  h+='<div class="grp">锁定（禁止自动判型）</div><div class="op" data-lock="1">'+(locked?"🔒 已锁定（点击解锁）":"🔓 未锁定（点击锁定）")+'</div>';
+  menu.innerHTML=h;
+  label.textContent=(info[cur]&&info[cur].label)||"模式";
+  mark.textContent=locked?"🔒":"";
+}
+function hideTip(){tip.style.display="none"}
+function showTip(op){
+  var txt=op&&op.dataset&&op.dataset.tip;
+  if(!txt)return;
+  tip.textContent=txt;tip.style.display="block";
+  var r=op.getBoundingClientRect();
+  var w=tip.offsetWidth,h=tip.offsetHeight;
+  var left=Math.max(8,Math.min(r.left,window.innerWidth-w-8));
+  var top=r.top-h-8;
+  if(top<8)top=r.bottom+8;
+  tip.style.left=left+"px";tip.style.top=top+"px";
+}
+function armTip(e){
+  var op=e.target&&e.target.closest?e.target.closest(".op[data-tip]"):null;
+  clearTimeout(hoverTimer);hideTip();
+  if(!op)return;
+  hoverTimer=setTimeout(function(){showTip(op)},600);
+}
+function toggle(f){open=typeof f==="boolean"?f:!open;if(open&&window.__frCloseOtherMenus)window.__frCloseOtherMenus("mode");menu.classList[open?"add":"remove"]("show");if(open)render();else{clearTimeout(hoverTimer);hideTip()}}
+document.addEventListener("fr:menu-others-open",function(ev){if(ev&&ev.detail&&ev.detail.keep==="mode")return;if(open){open=false;menu.classList.remove("show");clearTimeout(hoverTimer);hideTip()}});
+document.addEventListener("fr:menu-others-open",function(ev){if(ev&&ev.detail&&ev.detail.keep==="mode")return;if(open){open=false;menu.classList.remove("show");clearTimeout(hoverTimer);hideTip()}});
+btn.onclick=function(e){e.stopPropagation();toggle()};
+menu.addEventListener("mouseover",armTip);
+menu.addEventListener("mouseout",function(){clearTimeout(hoverTimer);hideTip()});
+menu.onclick=function(e){
+  var op=e.target&&e.target.closest?e.target.closest(".op"):null;
+  if(!op)return;
+  if(op.dataset.lock){locked=!locked;api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locked:locked})}).then(function(){render();try{load()}catch(_){}});return}
+  if(!op.dataset.k)return;
+  api("/fr/api/mode",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:op.dataset.k})}).then(function(){cur=op.dataset.k;render();toggle(false);try{load()}catch(_){}});
+};
+document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest)return;if(open&&!t.closest("#frModeMenu")&&!t.closest("#btnMode"))toggle(false)});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&open)toggle(false)});
+function refresh(){api("/fr/api/mode").then(function(j){
+  if(j&&j.presetsInfo&&j.presetsInfo.length){info={};for(var i=0;i<j.presetsInfo.length;i++){var p=j.presetsInfo[i];info[p.key]={label:p.label,summary:p.summary}}}
+  cur=(j&&j.mode)||"coding";locked=!!(j&&j.locked);render();
+})}
+refresh();setInterval(refresh,15000);
 })();
 </script>
 </body>
