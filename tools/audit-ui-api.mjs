@@ -22,12 +22,12 @@ for (const [name, needle] of [
   ['会话组面板', 'id="groupsModal"'],
   ['模型切换', 'id="btnModel"'],
   ['发送即打断', 'id="fireMode"'],
-  ['权限芯片', 'id="permChip"'],
+  ['权限切换按钮', 'perm-btn'],
   ['思考折叠', 'class="think"'],
   ['复制按钮', 'class="copy"'],
   ['草稿保存', 'DRAFT_KEY'],
   ['Ctrl+K', "'k'"],
-  ['模板', 'TMPLS'],
+  ['空状态大字', 'empty-title'],
 ]) add('  └ ' + name, html.includes(needle))
 
 // 2) 不渲染后台消息（上次修的）

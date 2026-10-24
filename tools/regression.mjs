@@ -54,18 +54,25 @@ try {
 
 // 4) 代码关键修复点存在性
 const src = fs.readFileSync(root + '/lib/index.js', 'utf8')
+// ★ #8 拆分后：部分关键逻辑迁到 lib/*.js，静态审计要覆盖全模块（否则误报"缺失"）
+const mods = ['board.js', 'state.js', 'delivery.js', 'scheduler.js', 'sentinels.js', 'kernel.js', 'modes.js']
+  .map((f) => { try { return fs.readFileSync(root + '/lib/' + f, 'utf8') } catch { return '' } })
+  .join('\n')
+const all = src + '\n' + mods
 const api = fs.readFileSync(root + '/lib/api.js', 'utf8')
 const page = fs.readFileSync(root + '/lib/ui/page.html', 'utf8')
 const codeChecks = {
+  '工具能力策略(解耦M13)': all.includes('WORK_TOOLS') && all.includes('isDeniedTool') && !/frontTools:\s*\[/.test(all),
+  '工具能力不按模式削减': /export function allowListFor[\s\S]{0,300}return WORK_TOOLS/.test(all),
   'wire() 统一接线': src.includes('const wire = (frontId, backId)'),
   'effort 显式传': src.includes('reasoningEffort: effortFor(tag)'),
   'BOM 已除': !fs.readFileSync(root + '/package.json').slice(0, 3).equals(Buffer.from([0xEF, 0xBB, 0xBF])),
   '预规划（投递后即时）': src.includes("trigger: 'step-delivered'"),
-  '无任务不跑哨兵': src.includes('hasActiveTask'),
-  'H5 需伴随失败': src.includes('stepsThisTask > cfg.taskStepMax && toolStats.failStreak'),
+  '无任务不跑哨兵': all.includes('hasActiveTask'),
+  'H5 需伴随失败': all.includes('taskStepMax') && all.includes('failStreak >= 2'),
   '同名工具失败才累加': src.includes('lastFailName'),
   '尊重用户走编排': src.includes('verdict-short-overruled'),
-  '冻结只调一次': (src.match(/freezeFront\(hits\.map/g) || []).length === 1,
+  '冻结只调一次': (all.match(/freezeFront\(hits\.map/g) || []).length === 1,
   '终局正文兜底': src.includes('final-answer-ask'),
   '新路线重置 done': src.includes('state-reset'),
   'wiring 健康度字段': api.includes("state,") && api.includes('frontMatched'),
