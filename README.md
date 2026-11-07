@@ -4,13 +4,13 @@
 
 **前台低档快答快做，后台高档逐步规划 —— 让两个会话像一条流水线那样干活**
 
-[![AI Project](https://img.shields.io/badge/项目类型-AI%20Project-8957e5?style=for-the-badge)](#-ai-project-项目说明)
-[![version](https://img.shields.io/github/v/release/Ewfrewfaf/dsh-fast-react?label=version&color=blue)](../../releases)
-[![downloads](https://img.shields.io/github/downloads/Ewfrewfaf/dsh-fast-react/total?label=downloads)](../../releases)
+[![npm version](https://img.shields.io/npm/v/dsh-fast-react?color=cb3837&label=npm)](https://www.npmjs.com/package/dsh-fast-react)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-fast-react?label=downloads)](https://www.npmjs.com/package/dsh-fast-react)
+[![version](https://img.shields.io/github/v/release/Ewfrewfaf/dsh-fast-react?label=release&color=blue)](../../releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![platform](https://img.shields.io/badge/DeepSeek%20Harness-%E2%89%A5%200.2-6f42c1)](#-安装)
 
-[快速开始](#-安装) · [使用指南](#-五分钟上手) · [API](#-http-api) · [架构](./docs/技术路线.md) · [FAQ](#-faq)
+[安装](#-安装) · [判型](#-判型引擎) · [模式](#-五种模式) · [工具](#-工具与-api) · [实测数据](#-实测数据) · [架构](./docs/技术路线.md)
 
 </div>
 
@@ -61,55 +61,117 @@
 
 ---
 
+## 🎯 判型引擎
+
+**不再「什么都走编排」。** v1.4 的痛点是：1 个文件的小改动也要叫醒后台规划，白亏 30-60%。
+
+现在先给任务打分，再决定走不走编排：
+
+```
+                    任务文本
+                       │
+                       ▼
+           ┌───────────────────────┐
+           │  四层词表打分（零 LLM） │
+           └───────────┬───────────┘
+                       │
+       ┌───────────────┼───────────────┐
+       ▼               ▼               ▼
+  score >= 6      3 < score < 6    score <= 3
+       │               │               │
+   ┌────────┐     ┌──────────┐    ┌────────┐
+   │ coding │     │   灰区   │    │ quick  │
+   │ 标准编排│     │先做+分诊 │    │ 自己做 │
+   └────────┘     └──────────┘    └────────┘
+```
+
+| 层 | 权重 | 条数 | 示例 |
+|---|---|---|---|
+| **系统设计** | +3 | 16 | WAL、memtable、事务隔离、崩溃恢复、锁设计、分布式、AST |
+| **架构动作** | +2 | 6 | 从零设计、架构改造、自主设计、结构性重构 |
+| **复杂度** | +1 | 10 | 多文件、端到端、调度编排、状态机、性能工程 |
+| **反面词** | −3/−6 | 8 | 已知问题清单、照规格实现、修 bug、单文件、**已知 N 个问题** |
+
+同类词最多计 3 条（防「并发 并发 并发」刷分）。另有代码量信号：≥350 行 +3 / ≤60 行 −1。
+
+**灰区分诊**：落在中间地带时，前台立刻开做，同时并行唤醒后台判断要不要接管 —— 前台不阻塞。
+
+---
+
+## 🎛 五种模式
+
+| 模式 | 后台 | 前台强度 | 产出 | 用途 |
+|---|---|---|---|---|
+| `quick` | ❌ | `off` | 直接答/改 | 问答、小改动 |
+| `consult` | ✅ 只分析 | `low` | `analysis.md` | 深度分析 |
+| `retrieval` | ❌ | `low` | 检索结果 | 并行查资料 |
+| `review` | ✅ | **`high`** | `review.md` | 代码审查（只读不改） |
+| `coding` | ✅ 写步骤 | `low` | 代码 + `deliver` | 标准编排 |
+
+**为什么 quick 关掉思考？** 小改动不需要推理。深度思考放在真正需要的地方：`coding` 由后台（`max` 档）承担，`review` 前台自己用 `high`。
+
+---
+
+## 📊 实测数据
+
+L1-L5 代码任务，每档 2 轮，**每题都跑机器验收**（`check.mjs`），DeepSeek V4.1 Flash 同模型对比。
+
+| 档 | 任务 | 单 Agent | 判型后 | 判型 | 工具（单/后） |
+|---|---|---|---|---|---|
+| L1 | 单函数 11 行 | 12.1s | **6.4s** | quick | 5 / 4 |
+| L2 | 单文件 27 行 | 21.3s | **10.0s** | quick | 8 / 4 |
+| L3 | 3 文件 33 行 | **39.7s** | 86.5s ⚠️ | quick | 14 / 71 |
+| L4 | 单文件 45 行 | 44.3s | 52.7s | quick | 12 / 18 |
+| L5 | 4 文件系统级 | 141.2s | **62.0s** | coding | 56 / 26 |
+
+**验收：判型后 10/10 通过，单 Agent 23/24。**
+
+### 结论
+
+- **小任务（L1/L2）：快 47-53%** —— 不再白跑一遍编排
+- **系统级任务（L5）：快 56%** —— 编排价值成立，工具从 56 降到 26
+- **L3 是反例**：一轮用了 71 个工具、143 秒，明显跑偏。**判型把它判成 quick 是对的，但前台自己没做好**
+- **L4 持平偏慢**：这类"单文件但复杂"的任务，编排与自做的差距很小
+
+> 数据来自本机 10 轮 benchmark（详见 `docs/技术路线.md`）。
+> L3 的单轮异常说明：**判型正确 ≠ 一定更快**，执行质量同样关键。
+
+---
+
 ## 📦 安装
 
-### 方式 A：tgz（推荐，离线可用）
-
 ```bash
-# 1) 下载 Release 里的 dsh-fast-react-<版本>.tgz
-# 2) 装进 profile
-dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
-# 3) 重启一次 DSH
+# npm
+dsh plugin --profile <profile> add dsh-fast-react
+
+# 或离线 tgz（从 Release 下载）
+dsh plugin --profile <profile> add ./dsh-fast-react-1.5.0.tgz
 ```
 
-打开控制台：侧边栏里的「快速反应」行，或直接访问 `http://127.0.0.1:<DSH 端口>/fr`
-（端口以 `dsh web` 或桌面端打印的地址为准，不一定是 19387）。
+**装完必须重启一次 DSH** —— `package.json` 里的 icon / locale / client 只在启动时扫描，不重启侧边栏不出现、图标不显示。
 
-### 方式 B：从源码链接（开发者）
-
-在 profile 的 `package.json`：
-
-```json
-{
-  "dependencies": { "dsh-fast-react": "link:C:/path/to/dsh-fast-react" },
-  "dsh": { "profile": { "bundles": ["…", "dsh-fast-react"] } }
-}
-```
-
-> 改 `lib/ui/*` **不用重启**：页面每次请求实时读盘。
-> 改 `lib/index.js` / `lib/api.js` 需重载插件；**任务运行中别重载**（会销毁内存会话）。
+打开控制台：侧边栏「快速反应」行，或 `http://127.0.0.1:<端口>/fr`（端口每次重启都可能变）。
 
 ### 环境要求
 
 | 项 | 要求 |
 |---|---|
-| DeepSeek Harness | **≥ 0.2.2-rc.1**（需要 `webserver` / `agentLoop` / `agentPresets` 服务） |
-| cordis（peer） | `>= 4.0.0-rc < 5`；DSH 0.2.2 自带 4.1.0，满足 |
-| Node.js | ≥ 20（**DSH 0.2.2 本身要求 ≥ 24.9**） |
+| DeepSeek Harness | ≥ 0.2.2-rc.1 |
+| Node.js | ≥ 20 |
 | 模型 | 任意可用 provider（面板内可切换） |
 
-### 跨机器安装（换用户 / 换电脑 / 服务器）
+### 开发者：从源码链接
 
-1. **黑板目录默认是可移植的**：`$FAST_REACT_BOARD` → `$DSH_HOME/fast-react` → `~/.dsh/fast-react`。
-   首次启动 `ensure()` 会递归创建，不需要手工建目录。
-   老版本写死过 `C:\Users\admin\Desktop\FastReact`，换机器会 EPERM 或在别人机器上造出 `admin` 目录——已修。
-2. **只装本体也能用**，但没有侧边栏「快速反应」页：那个导航行由独立包
-   `@dsh-external/dsh-fast-react-ui` 提供（页面内容 iframe `/fr`，不装不影响编排，直接用 `/fr` 即可）。
-3. **`agentPreset` 必须是真实存在的预设名**（默认 `standard`）。名字不存在时
-   `svcPresets.mount()` 会失败并记日志，前台会退化成没有工具的会话。
-   本机可用预设见 `~/.dsh/.agent-presets/` 与 DSH 内建（standard / minimal / ptc / cordis）。
-4. **profile 里的 `link:` 绝对路径要按目标机器改**（`dsh-fast-react`、UI 包、以及其它 link 插件）。
-5. 无固定端口，跟随 DSH 的 web 端口；不占用额外端口。
+profile 的 `package.json` 里加：
+
+```json
+{
+  "dependencies": { "dsh-fast-react": "link:C:/path/to/dsh-fast-react" },
+  "dsh": { "profile": { "bundles": ["...", "dsh-fast-react"] } }
+}
+```
+
+改 `lib/ui/*` 不用重启（实时读盘）；改 `lib/index.js` 需重载插件，**任务运行中别重载**。
 
 ---
 
@@ -146,46 +208,58 @@ dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
 
 ## 🔌 HTTP API
 
-Base：`http://127.0.0.1:<DSH web 端口>`（示例统一写 19387），`Content-Type: application/json`
+Base：`http://127.0.0.1:<端口>`，`Content-Type: application/json`
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/fr` | 控制台页面 |
-| GET | `/fr/sidebar.js` | 侧边栏注入脚本（热更新通道） |
-| GET | `/fr/api/status` | 全量状态（前后台 phase、黑板、chat、模型、权限、stall） |
-| POST | `/fr/api/start` | 启用编排 + 确保接线 |
-| POST | `/fr/api/stop` | 取消前后台 + 暂停编排 |
-| POST | `/fr/api/rebuild` | 重建前后台会话 |
-| POST | `/fr/api/task` | **发任务**：`{text, interrupt?, sessionId?, group?, role?}` |
-| GET | `/fr/api/sessions` | 所有活会话（id/role/phase/group/preset/wired） |
-| GET | `/fr/api/session?id=&group=&role=` | 单个会话信息（会话级寻址） |
-| POST | `/fr/api/fire` | 只打断：`{reason, sessionId?, group?, role?}` |
-| GET/POST | `/fr/api/config` | 读写配置（白名单字段） |
-| GET | `/fr/api/models` | 模型清单 |
-| POST | `/fr/api/model` | 切换模型 `{provider, model}` |
-| GET/POST | `/fr/api/groups` | 会话组：`create/adopt/switch/policy/repair/delete` |
+| GET | `/fr/api/status` | 全量状态 |
+| POST | `/fr/api/task` | 发任务 `{text, mode?, mode_strict?, group?, role?, interrupt?}` |
+| POST | `/fr/api/brake` | 刹车 `{scope, reason?}` |
+| POST | `/fr/api/start` `/stop` `/rebuild` | 启动 / 停止 / 重建会话 |
+| GET/POST | `/fr/api/groups` | 会话组：create/switch/policy/delete |
 | GET | `/fr/api/events?since=&limit=` | 事件增量 |
-| POST | `/fr/api/relay` | 运维中继 `{action, args}` |
-
-**示例**
 
 ```bash
 # 发任务（排队）
-curl -X POST localhost:19387/fr/api/task -H 'content-type: application/json' \
-  -d '{"text":"把 README 的示例命令跑一遍并汇报"}'
+curl -X POST localhost:19387/fr/api/task -H 'content-type: application/json'   -d '{"text":"把 README 的示例命令跑一遍","mode":"coding"}'
 
-# 发任务（先打断再投递）
-curl -X POST localhost:19387/fr/api/task -H 'content-type: application/json' \
-  -d '{"text":"停一下，只回三个字：已打断","interrupt":true}'
-
-# 新建并切换会话组
-curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' -d '{"action":"create","title":"桌面整理"}'
-curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' -d '{"action":"switch","key":"FR-01"}'
-
-# 给该组完全权限（不再弹审批）
-curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' \
-  -d '{"action":"policy","key":"FR-01","preset":"danger-full-access"}'
+# 刹车
+curl -X POST localhost:19387/fr/api/brake -H 'content-type: application/json'   -d '{"scope":"all","reason":"手动停"}'
 ```
+
+---
+
+## 🧰 工具与 API
+
+### 全局工具（任意会话可调）
+
+| 工具 | 参数 | 用途 |
+|---|---|---|
+| `fr_task` | `text`, `mode?`, `mode_strict?`, `group?`, `sessionId?`, `role?`, `interrupt?` | 投递任务，四级寻址 |
+| `fr_status` | `detail?`, `group?` | 查状态 |
+| `fr_brake` | `scope`, `reason?` | 刹车（不停插件） |
+
+```js
+// 投给会话组前台
+fr_task({ text: "修一下这个 bug", group: "FR-123", mode: "coding" })
+```
+
+### 内部工具（仅快速反应会话可见）
+
+按 agent scope 注册，普通会话看不到：
+
+| 工具 | 角色 | 作用 |
+|---|---|---|
+| `fr_escalate` | 前台专属 | 上交任务 |
+| `fr_route` | 后台专属 | 提交路线（plan/append） |
+| `fr_mode` | 前台 | 声明/切换模式 |
+| `fr_worker` | 前台 | 派只读检索 worker |
+
+> `fr_escalate` 给后台会导致「后台上交给自己 → 无限递归」（真实事故）；
+> `fr_route` 给前台等于自当规划者，双会话架构就没了。
+
+**HTTP 与工具的分工**：HTTP 给外部程序（端口每次重启变、失败只看到超时）；工具给 DSH 内的 Agent（不依赖端口、错误结构化）。
 
 ---
 
@@ -222,17 +296,17 @@ curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' \
 
 ## ❓ FAQ
 
-**为什么首帧要 30–60 秒？**
-后台是高档次模型，在写 route + steps；前台本身仍是秒级响应。面板会显示「正在处理…」。
-
-**热重载会怎样？**
-插件创建的会话是内存态，重载=销毁（排队消息一起没）。所以任务运行中不要重载。
-
-**面板会盖住右下角挂件吗？**
-会。面板按原生会话区矩形整体覆盖，这是当前的取舍（可加排除区域，未做）。
-
-**能和记忆 / 审计类插件一起用吗？**
-可以，互不依赖、也不改 DSH 的 DOM 与全局配置。长期记忆请按你所装记忆插件自己的官方文档配置（模型、存储位置等由它决定）。
+| 问题 | 答案 |
+|---|---|
+| **首帧为什么 30-60 秒？** | 后台是高档次模型在写 route + steps；前台仍是秒级响应 |
+| **热重载会怎样？** | 会话是内存态，重载=销毁（排队消息一起没）。任务运行中别重载 |
+| **判型阈值能调吗？** | 能。`lib/modes.js` 的 `GRAY_HIGH` / `GRAY_LOW`，改完重载生效 |
+| **判错了怎么办？** | 三层兜底：①前台主动上交自动升级 ②跑满 25 个工具自动升级 ③`fr_task({mode, mode_strict})` 手动指定 |
+| **为什么 quick 关掉思考？** | 小改动不需要推理，实测 L1 从 12.1s 降到 6.4s。深度思考交给 `coding`（后台 max）和 `review`（前台 high） |
+| **侧边栏没有「快速反应」？** | 必须重启一次 DSH。`dsh.client` 只在启动时扫描 |
+| **管理页不显示图标/介绍？** | 介绍看 `locale/zh.json` 的 `meta.description`；图标看 `package.json` 的 `icon`（**必须相对路径**，data URL 会报错） |
+| **和记忆/审计插件冲突吗？** | 不冲突。互不依赖，也不改 DSH 的 DOM 与全局配置 |
+| **面板会盖住右下角挂件吗？** | 会。面板按原生会话区矩形整体覆盖，这是当前取舍 |
 
 ---
 
@@ -240,26 +314,30 @@ curl -X POST localhost:19387/fr/api/groups -H 'content-type: application/json' \
 
 ```
 dsh-fast-react/
-├── package.json          # dsh 插件元信息（bundle.patch / console=/fr）
-├── cordis.patch.yml      # profile 装配层
+├── package.json        # bundle / client / console / icon / locale
+├── icon.svg            # 管理页图标
+├── locale/             # 管理页标题与介绍（zh/en）
 ├── lib/
-│   ├── index.js          # 装配 / 事件 / 简报 / 哨兵 / 看门狗 / 会话组
-│   ├── api.js            # HTTP 路由（/fr, /fr/api/*）
-│   └── ui/
-│       ├── page.html     # 控制台（对话/技术面板/会话组/模型/权限）
-│       └── sidebar.js    # 侧边栏注入与浮层（几何跟随、灰线对齐）
-├── docs/
-│   ├── 技术路线.md        # 架构原理 + 踩坑表
-│   └── 使用须知.md        # 安装/上手/API/排障（详细版）
-└── README.md
+│   ├── index.js        # 装配层 + 状态机（文件头有区块地图）
+│   ├── api.js          # HTTP 路由
+│   ├── client.js       # 浏览器侧（侧边栏 + 控制台挂载）
+│   ├── modes.js        # 五种模式 + 判型引擎
+│   ├── sentinel.js     # 哨兵解析与求值（纯函数，可单测）
+│   ├── route-plan.js   # 路线校验 / 里程碑截断 / 哨兵预检
+│   ├── scheduler.js    # 调度核心（批量 / 水位 / 归档守卫）
+│   ├── board.js        # 黑板 IO
+│   └── ui/             # 控制台页面 + 侧边栏注入
+├── docs/               # 技术路线 / 使用须知 / 移植指南
+└── tools/              # 自检 / 回归 / 单测
 ```
+
+下沉到独立文件的逻辑都有单测：`node tools/test-sentinel.mjs`、`node tools/test-route-plan.mjs`（共 33 例）。
 
 ---
 
 ## 📄 License
 
 MIT © 2026 — 见 [LICENSE](./LICENSE)
-
 
 
 
