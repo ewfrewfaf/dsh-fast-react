@@ -1,5 +1,6 @@
 import fs from 'node:fs'
-const s = fs.readFileSync('C:/Users/admin/.dsh/plugins/dsh-fast-react/lib/index.js', 'utf8')
+import { libFile } from './paths.mjs'
+const s = fs.readFileSync(libFile('index.js'), 'utf8')
 const c = {
   'userStopAt 声明': s.includes('let userStopAt'),
   'stopAll 记录': /stopAll \(\) \{[\s\S]{0,120}userStopAt = Date\.now\(\)/.test(s),

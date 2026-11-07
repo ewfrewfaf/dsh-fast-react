@@ -31,6 +31,12 @@
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
+  /* 实例徽标（2026-11-07）：并行跑多个流水线时区分 "这是哪一个" */
+  .inst-badge{display:none;margin-left:8px;padding:1px 7px;border-radius:6px;font-size:11px;font-weight:600;
+    letter-spacing:.03em;border:1px solid rgba(122,170,255,.45);color:#7aaaff;background:rgba(122,170,255,.12);
+    vertical-align:middle}
+  .inst-badge.on{display:inline-block}
+  .inst-badge.b{border-color:rgba(255,170,90,.45);color:#ffaa5a;background:rgba(255,170,90,.12)}
   html,body{margin:0;padding:0;height:100%}
   body{background:var(--panel-fill,var(--bg));color:var(--fg);font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
   #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
@@ -122,6 +128,13 @@
   .composer:focus-within{outline:none}
   .composer textarea{width:100%;min-height:52px;max-height:210px;resize:none;background:transparent;color:var(--fg);border:0;outline:none;font:14.5px/1.6 inherit;padding:2px 4px}
   .composer textarea::placeholder{color:var(--muted)}
+  /* ★ 输入栏滑条：与聊天区同款灰（2026-11-07） */
+  .composer textarea{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+  .composer textarea:hover{scrollbar-color:rgba(255,255,255,.3) transparent}
+  .composer textarea::-webkit-scrollbar{width:8px;height:8px}
+  .composer textarea::-webkit-scrollbar-track{background:transparent}
+  .composer textarea::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  .composer textarea:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
   .composer .bar{display:flex;align-items:center;gap:8px}
   .composer .bar .hint{font-size:11.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;white-space:nowrap}
   /* 胶囊按钮（DSH 权限胶囊同款：透明底 + 细描边） */
@@ -158,7 +171,7 @@
   #mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}
   #mask.show{display:block}
   /* 会话组管理弹层 */
-  #groupsModal{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);width:min(780px,94vw);height:calc(100% - 300px);max-height:min(84vh,860px);min-height:240px;container-type:inline-size;container-name:gm;background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
+  #groupsModal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(820px,94vw);height:min(80vh,800px);min-height:240px;container-type:inline-size;container-name:gm;background:#232326;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 48px rgba(0,0,0,.55);display:none;flex-direction:column;z-index:25;overflow:hidden}
   #groupsModal.show{display:flex}
   .gm-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
   .gm-hint{font-size:11px;color:var(--muted)}
@@ -402,6 +415,26 @@
    这样本页所有 var(--dsw-alias-*) 都变成 DSH 的实时真实色值；
    无父页（浏览器独立打开）时保持 :root 里的 fallback。每 3s 兜底重同步 + focus 时同步。 */
 (function(){
+  // ★ 多实例：从自身地址反推基路径
+  // ── 实例标识（2026-11-07）：/fr → a，/fr_b → b；标题与徽标一起变 ──
+  try {
+    var __cfg = window.__FR_CFG || {}
+    var __base = String(__cfg.base || window.__FR_BASE || '/fr')
+    var __m = __base.match(/^\/fr_([a-z]+(?:_[a-z]+)?)$/i)
+    var __tag = __m ? __m[1] : 'a'
+    window.__FR_TAG = __tag
+    if (__tag !== 'a') {
+      document.title = '随叫随到 · ' + __tag.toUpperCase()
+      document.addEventListener('DOMContentLoaded', function () {
+        var b = document.getElementById('frInstBadge')
+        if (b) { b.textContent = '实例 ' + __tag.toUpperCase(); b.className = 'inst-badge on ' + __tag }
+      })
+    }
+  } catch (e) { /* 标识失败不影响功能 */ }
+  window.__FR_BASE = (function(){
+    var p = location.pathname.replace(/\/settings$/, '').replace(/\/$/, '')
+    return p || '/fr'
+  })();
   var NAMES=['--dsw-alias-bg-base','--dsw-alias-bg-layer-1','--dsw-alias-bg-layer-2','--dsw-alias-bg-overlay',
     '--dsw-alias-border-l1','--dsw-alias-border-l2','--dsw-alias-brand-primary',
     '--dsw-alias-label-primary','--dsw-alias-label-secondary',
@@ -429,17 +462,41 @@
     }catch(e){return false}
   }
   sync();
-  setInterval(sync,3000);
+  window.__frTimer(3000, sync);
   window.addEventListener('focus',sync);
 })();
 </script>
 </head>
 <body>
+<script>
+/* ── 统一轮询调度器（2026-11-07）：把页面里分散的 setInterval 收成一个 1s 心跳 ──
+   · 只保留一个定时器，避免多个 setInterval 各自扎堆触发（同一瞬间读同一批文件）
+   · 页面隐藏时整体暂停（document.hidden），标签页在后台不再空转 */
+window.__frTimer = (function(){
+  // 开关：window.__FR_CFG.pollUnified === false ⇒ 退回各模块自己的 setInterval（对照组）
+  if (window.__FR_CFG && window.__FR_CFG.pollUnified === false) {
+    return function(ms, fn){ setInterval(fn, ms); };
+  }
+  var jobs = [];
+  var last = 0;
+  setInterval(function(){
+    if (document.hidden) return;
+    var n = Date.now();
+    last = n;
+    for (var i = 0; i < jobs.length; i++) {
+      var j = jobs[i];
+      if (n - j.at >= j.ms) { j.at = n; try { j.fn() } catch (e) { /* 单个任务失败不影响其它 */ } }
+    }
+  }, 1000);
+  return function(ms, fn){ jobs.push({ ms: ms, fn: fn, at: 0 }); };
+})();
+</script>
 
 <div id="app">
   <header>
     <span id="live" class="dot"></span>
     <span class="title">随叫随到</span>
+    <span id="frInstBadge" class="inst-badge" title="当前实例（并行时用于区分两个流水线）"></span>
     <span class="chips">
       <span class="chip">前台 <b id="fphase">—</b></span>
       <span class="chip">后台 <b id="bphase">—</b></span>
@@ -447,8 +504,9 @@
     </span>
     <span class="grow"></span>
     <button id="btnGroups" class="icon" title="会话组管理">▦</button>
-    <button id="btnDrawer" class="icon" title="技术面板">⚙</button>
+    <button id="btnDrawer" class="icon" title="设置">⚙</button>
     <button id="btnStart" class="primary" title="启动">启动</button>
+    <button id="btnBrake" class="ghost" title="刹车：立即中止当前任务，插件继续待命（不等于停止）">⏸ 刹车</button>
     <button id="btnStop" class="ghost" title="停止">停止</button>
   </header>
 
@@ -583,7 +641,7 @@
     clearTimeout(toast._t); toast._t = setTimeout(function(){ t.className = 'toast' }, 2600)
   }
   function api(path, opts){
-    var url = '/fr/api' + path
+    var url = (window.__FR_BASE || '/fr') + '/api' + path
     return fetch(url, Object.assign({ headers:{ 'content-type':'application/json' }, credentials:'same-origin' }, opts||{}))
       .then(function(r){
         return r.text().then(function(txt){
@@ -1013,6 +1071,8 @@
   })
   restoreDraft()
   $('btnStart').onclick = function(){ post('/start', {}, '已启动') }
+  // ★ 刹车：只停当前任务，不禁用插件（区别于"停止"）
+  $('btnBrake').onclick = function(){ if(confirm('刹车：立即中止当前任务（前后台都停）？插件继续待命，可随时再发任务。')) post('/brake', { scope: 'all', reason: 'ui' }, '已刹车') }
   $('btnStop').onclick = function(){ if(confirm('停止快速反应（取消正在跑的前后台）？')) post('/stop', {}, '已停止') }
   $('btnRebuild').onclick = function(){ post('/rebuild', {}, '已重建会话') }
   $('btnCfg').onclick = function(){
@@ -1188,7 +1248,7 @@
     }
     // 把"可能是文件名"的输入解析成真实绝对路径（后端在桌面/下载/文档等目录查找）
     function resolvePath(p){
-      return fetch('/fr/api/resolve-path', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: p }) })
+      return fetch(window.__FR_BASE + '/api/resolve-path', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: p }) })
         .then(function(r){ return r.json() })
         .then(function(j){ return (j && j.ok && j.path) ? { path: j.path, resolved: !!j.resolved } : { path: p, resolved: false, missing: true } })
         .catch(function(){ return { path: p, resolved: false, missing: true } })
@@ -1320,12 +1380,12 @@
       if (!op) return
       var preset = op.getAttribute('data-p') || ''
       // 通过 groups/policy 应用到当前活跃组；没有组则写全局默认
-      fetch('/fr/api/groups').then(function(r){ return r.json() }).then(function(j){
+      fetch(window.__FR_BASE + '/api/groups').then(function(r){ return r.json() }).then(function(j){
         var active = (j.groups || []).filter(function(g){ return g.active })[0]
         if (active) {
-          return fetch('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: active.key, preset: preset }) })
+          return fetch(window.__FR_BASE + '/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: active.key, preset: preset }) })
         }
-        return fetch('/fr/api/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ permissionPreset: preset }) })
+        return fetch(window.__FR_BASE + '/api/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ permissionPreset: preset }) })
       }).then(function(){
         cur = preset                       // ★ 立即记住，高亮马上跟上
         try { localStorage.setItem('fr_perm', preset) } catch (e) {}
@@ -1341,13 +1401,13 @@
     })
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && open) toggle(false) })
     function refresh(){
-      fetch('/fr/api/status').then(function(r){ return r.json() }).then(function(j){
+      fetch(window.__FR_BASE + '/api/status').then(function(r){ return r.json() }).then(function(j){
         var p = j.permissions || {}
         cur = p.front || p.default || ''
         render()
       }).catch(function(){})
     }
-    refresh(); setInterval(refresh, 15000)
+    refresh(); window.__frTimer(15000, refresh)
   })();
 
   // ── 三个下拉菜单互斥：打开一个就广播让其它关掉自己 ────────────────
@@ -1357,7 +1417,7 @@
 
   // ── T3 待批准卡片（每 2 秒拉一次）────────────────────────────────────
   function renderT3(){
-    fetch('/fr/api/confirm', { cache: 'no-store' }).then(function(r){ return r.json() }).then(function(j){
+    fetch(window.__FR_BASE + '/api/confirm', { cache: 'no-store' }).then(function(r){ return r.json() }).then(function(j){
       var box = document.getElementById('t3Box'); if (!box) return
       var list = (j && j.pending) || []
       if (!list.length){ box.style.display = 'none'; box.innerHTML = ''; return }
@@ -1376,11 +1436,11 @@
   document.addEventListener('click', function(e){
     var t = e.target; if (!t || !t.dataset || !t.dataset.t3) return
     var step = t.dataset.step, action = t.dataset.t3 === 'ok' ? 'approve' : 'reject'
-    fetch('/fr/api/confirm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: action, step: step }) })
+    fetch(window.__FR_BASE + '/api/confirm', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: action, step: step }) })
       .then(function(){ toast(action === 'approve' ? '已批准，前台可继续' : '已拒绝'); renderT3(); load() })
       .catch(function(){ toast('操作失败', true) })
   })
-  renderT3(); setInterval(renderT3, 2000)
+  renderT3(); window.__frTimer(3000, renderT3)  /* T3 从 2s → 3s，与心跳对齐 */
   load().then(nextPoll, nextPoll)
 })();
 </script>
@@ -1439,8 +1499,73 @@ function refresh(){api("/fr/api/mode").then(function(j){
   if(j&&j.presetsInfo&&j.presetsInfo.length){info={};for(var i=0;i<j.presetsInfo.length;i++){var p=j.presetsInfo[i];info[p.key]={label:p.label,summary:p.summary}}}
   cur=(j&&j.mode)||"coding";locked=!!(j&&j.locked);render();
 })}
-refresh();setInterval(refresh,15000);
+refresh();window.__frTimer(15000, refresh);
 })();
 </script>
+
+<!-- ── 设置浮层入口（2026-11-07）：⚙ 打开 /fr/settings（iframe 居中悬浮）── -->
+<script>
+(function(){
+  if (document.getElementById('frsBtn')) return;
+  var css = document.createElement('style');
+  css.textContent = ''
+    + '#frsBtn{position:fixed;right:18px;bottom:76px;z-index:9998;width:38px;height:38px;border-radius:50%;'
+    + 'border:1px solid #2f2f38;background:#17171a;color:#c9c9d1;font-size:18px;cursor:pointer;'
+    + 'box-shadow:0 6px 18px rgba(0,0,0,.45)}'
+    + '#frsBtn:hover{color:#fff;border-color:#3c3c48}'
+    + '#frsWrap{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;'
+    + 'background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:24px}'
+    + '#frsWrap.on{display:flex}'
+    + '#frsCard{position:relative;width:min(820px,94vw);height:min(80vh,800px);background:#17171a;'
+    + 'border:1px solid #2a2a30;border-radius:14px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.6)}'
+    + '#frsCard iframe{width:100%;height:100%;border:0;display:block;background:#17171a}'
+    + '#frsClose{position:absolute;top:10px;right:104px;z-index:2;border:1px solid #2a2a30;background:#17171a;'
+    + 'color:#8b8b95;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}'
+    + '#frsClose:hover{color:#e6e6ea}';
+  document.head.appendChild(css);
+
+  var btn = document.createElement('button');
+  btn.id = 'frsBtn'; btn.title = '快速反应设置'; btn.textContent = '⚙';
+  document.body.appendChild(btn);
+
+  var wrap = document.createElement('div'); wrap.id = 'frsWrap';
+  var card = document.createElement('div'); card.id = 'frsCard';
+  var ifr = document.createElement('iframe'); ifr.src = window.__FR_BASE + '/settings'; ifr.title = '快速反应设置';
+  var x = document.createElement('button'); x.id = 'frsClose'; x.textContent = '关闭';
+  card.appendChild(ifr); card.appendChild(x); wrap.appendChild(card); document.body.appendChild(wrap);
+
+  function open(v){
+    wrap.classList.toggle('on', v);
+    // 每次打开都换 URL：绕开 iframe 文档缓存，保证看到的是磁盘上的最新版
+    if (v) { ifr.src = window.__FR_BASE + '/settings?t=' + Date.now() }
+  }
+  btn.onclick = function(){ open(true) };
+  x.onclick = function(){ open(false) };
+  wrap.addEventListener('click', function(e){ if (e.target === wrap) open(false) });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') open(false) });
+
+  // ★ 技术面板按钮（#btnDrawer）改为打开设置浮层（2026-11-07）
+  //   捕获阶段拦截：原按钮的点击处理器在冒泡阶段，stopPropagation 后它不会再触发。
+  document.addEventListener('click', function(e){
+    var hit = e.target && e.target.closest && e.target.closest('#btnDrawer');
+    if (!hit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    open(true);
+  }, true);
+  try {
+    var b0 = document.getElementById('btnDrawer');
+    if (b0) {
+      b0.title = '设置';
+      b0.setAttribute('aria-label', '设置');
+      // 直接改写 onclick 属性：原页面是 $('btnDrawer').onclick = ... 赋值的，
+      // 覆盖它比只靠捕获拦截更彻底（双保险）。
+      b0.onclick = function(ev){ if (ev) { ev.preventDefault(); ev.stopPropagation(); } open(true); };
+    }
+  } catch (err) { /* 忽略 */ }
+})();
+</script>
+
 </body>
 </html>

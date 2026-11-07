@@ -1,9 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { PLUGIN_ROOT, tmpDir, desktopDir, join } from './paths.mjs'
 
-const out = 'C:/Users/admin/Desktop/快速反应-交付'
-const src = 'C:/Users/admin/.dsh/plugins/dsh-fast-react'
+const out = join(desktopDir(), '快速反应-交付')
+const src = PLUGIN_ROOT
 const ver = JSON.parse(fs.readFileSync(src + '/package.json', 'utf8')).version
 
 // 1) 清理旧版本产物
@@ -40,7 +41,7 @@ const copy = (rel) => {
 for (const r of ['package.json', 'README.md', 'LICENSE', 'cordis.patch.yml', '.gitignore', 'lib', 'docs', 'tools']) copy(r)
 
 // 3) 打源码 zip（根层 = 仓库内容）
-const tmp = 'C:/Users/admin/AppData/Local/Temp/fr-src-final'
+const tmp = tmpDir('fr-src-final')
 fs.rmSync(tmp, { recursive: true, force: true })
 fs.mkdirSync(tmp, { recursive: true })
 fs.cpSync(snap, tmp, { recursive: true })

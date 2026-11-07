@@ -1,19 +1,24 @@
 {
   "name": "dsh-fast-react",
-  "version": "1.4.1",
-  "description": "快速反应：前台低档快答快做 + 后台高档逐步规划的双会话编排插件，含独立 Web 控制台与便捷 API",
+  "version": "1.5.0",
+  "description": "双会话编排：前台快速执行，后台逐步规划。自动判型决定自己干还是交给后台。",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
-    ".": "./lib/index.js"
+    ".": "./lib/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json",
+    "./client": "./lib/client.js"
   },
   "files": [
     "lib",
     "docs",
     "tools",
+    "icon.svg",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "locale"
   ],
   "keywords": [
     "dsh",
@@ -42,11 +47,20 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
-    "console": "/fr"
+    "console": "/fr",
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ]
+    },
+    "manifestVersion": 1
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Ewfrewfaf/dsh-fast-react"
   },
-  "homepage": "https://github.com/Ewfrewfaf/dsh-fast-react#readme"
+  "homepage": "https://github.com/Ewfrewfaf/dsh-fast-react#readme",
+  "icon": "./icon.svg"
 }

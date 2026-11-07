@@ -3,11 +3,25 @@
  * 快速反应 · 插件自检脚本（升级 DSH 前后各跑一次，对照结果）
  *
  * 用法：
- *   node tools/selfcheck.mjs                 # 默认 127.0.0.1:19387
+ *   node tools/selfcheck.mjs                 # 自动探测端口（推荐）
  *   node tools/selfcheck.mjs 19388           # 指定端口
  *   node tools/selfcheck.mjs 19387 out.json  # 结果另存 JSON（做基线）
+ *
+ * ★ 2026-11-07：默认端口不再写死。DSH web 每次启动端口会变
+ *   （实测 19387 → 7754 → 13889），写死会让本脚本人为制造 6 条假失败
+ *   （全部 fetch failed），把"环境不对"误报成"代码坏了"。
  */
-const port = process.argv[2] || '19387'
+const CANDIDATES = ['1890', '11296', '2204', '7408', '3557', '9148', '10304', '13889', '7754', '19387', '4099', '5239', '7351', '3633']
+async function detectPort () {
+  for (const p of CANDIDATES) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${p}/fr/api/status`, { signal: AbortSignal.timeout(1200) })
+      if (r.ok || r.status === 401 || r.status === 403) return p
+    } catch { /* 下一个 */ }
+  }
+  return null
+}
+const port = process.argv[2] || (await detectPort()) || '13889'
 const outFile = process.argv[3] || ''
 const base = `http://127.0.0.1:${port}`
 
@@ -45,7 +59,9 @@ try {
   const { json: d } = await j('/fr/api/status')
   add('status 接口', !!(d && d.ok !== false), '')
   add('  └ 前后台接线', !!(d.front || d.back), `front=${d.front ? d.front.phase : 'null'} back=${d.back ? d.back.phase : 'null'}`)
-  add('  └ models 字段', !!(d.models && d.models.model), JSON.stringify(d.models))
+  // ★ 2026-11-07 判据修正：models.model 是**全局**配置，允许为空（"跟随默认"是合法状态，
+  //   正是 rebuild 污染修复后本机的状态）。真正必须存在的是「实际生效」的模型信息。
+  add('  └ models 字段', !!(d.models && (d.models.model || d.models.frontModel || d.models.actual)), JSON.stringify(d.models))
   add('  └ permissions 字段', !!(d.permissions), JSON.stringify(d.permissions))
   add('  └ stall 看门狗字段', !!(d.stall), JSON.stringify(d.stall))
   add('  └ chat 结构', Array.isArray((d.chat || {}).front), `front=${((d.chat || {}).front || []).length}条`)

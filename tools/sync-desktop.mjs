@@ -2,9 +2,10 @@
 // 所以路径写在脚本里，命令行只传参数）
 import fs from 'node:fs'
 import path from 'node:path'
+import { PLUGIN_ROOT, desktopDir, join } from './paths.mjs'
 
-const srcDir = 'C:/Users/admin/.dsh/plugins/dsh-fast-react'
-const outDir = 'C:/Users/admin/Desktop/快速反应-交付'
+const srcDir = PLUGIN_ROOT
+const outDir = join(desktopDir(), '快速反应-交付')
 
 const cp = (from, to) => {
   fs.mkdirSync(path.dirname(to), { recursive: true })

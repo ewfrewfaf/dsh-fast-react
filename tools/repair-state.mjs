@@ -1,6 +1,7 @@
 // 手工修复：把卡住的黑板进度重置为首步，让投递逻辑重新认领 S1
 import fs from 'node:fs'
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+import { boardDir } from './paths.mjs'
+const board = boardDir()
 const statePath = board + '/state.md'
 const before = fs.readFileSync(statePath, 'utf8')
 const after = `planVersion: 0

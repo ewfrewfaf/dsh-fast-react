@@ -66,13 +66,14 @@
 ### 方式 A：tgz（推荐，离线可用）
 
 ```bash
-# 1) 下载 Release 里的 dsh-fast-react-1.0.2.tgz
+# 1) 下载 Release 里的 dsh-fast-react-<版本>.tgz
 # 2) 装进 profile
 dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
 # 3) 重启一次 DSH
 ```
 
-打开控制台：**侧边栏「插件」下方的「快速反应」**，或直接访问 `http://127.0.0.1:19387/fr`
+打开控制台：侧边栏里的「快速反应」行，或直接访问 `http://127.0.0.1:<DSH 端口>/fr`
+（端口以 `dsh web` 或桌面端打印的地址为准，不一定是 19387）。
 
 ### 方式 B：从源码链接（开发者）
 
@@ -85,16 +86,30 @@ dsh plugin --profile <你的 profile> add ./dsh-fast-react-<版本>.tgz
 }
 ```
 
-> 改 `lib/ui/*` **不用重启**：loader 每 3s 拉取并注入（首次装配需重启）。
+> 改 `lib/ui/*` **不用重启**：页面每次请求实时读盘。
 > 改 `lib/index.js` / `lib/api.js` 需重载插件；**任务运行中别重载**（会销毁内存会话）。
 
 ### 环境要求
 
 | 项 | 要求 |
 |---|---|
-| DeepSeek Harness | 桌面版或 `dsh web`（需要 `webserver` / `agentLoop` / `agentPresets`） |
-| Node.js | ≥ 20 |
-| 模型 | 任意可用 provider（面板内可切换，20+ 家） |
+| DeepSeek Harness | **≥ 0.2.2-rc.1**（需要 `webserver` / `agentLoop` / `agentPresets` 服务） |
+| cordis（peer） | `>= 4.0.0-rc < 5`；DSH 0.2.2 自带 4.1.0，满足 |
+| Node.js | ≥ 20（**DSH 0.2.2 本身要求 ≥ 24.9**） |
+| 模型 | 任意可用 provider（面板内可切换） |
+
+### 跨机器安装（换用户 / 换电脑 / 服务器）
+
+1. **黑板目录默认是可移植的**：`$FAST_REACT_BOARD` → `$DSH_HOME/fast-react` → `~/.dsh/fast-react`。
+   首次启动 `ensure()` 会递归创建，不需要手工建目录。
+   老版本写死过 `C:\Users\admin\Desktop\FastReact`，换机器会 EPERM 或在别人机器上造出 `admin` 目录——已修。
+2. **只装本体也能用**，但没有侧边栏「快速反应」页：那个导航行由独立包
+   `@dsh-external/dsh-fast-react-ui` 提供（页面内容 iframe `/fr`，不装不影响编排，直接用 `/fr` 即可）。
+3. **`agentPreset` 必须是真实存在的预设名**（默认 `standard`）。名字不存在时
+   `svcPresets.mount()` 会失败并记日志，前台会退化成没有工具的会话。
+   本机可用预设见 `~/.dsh/.agent-presets/` 与 DSH 内建（standard / minimal / ptc / cordis）。
+4. **profile 里的 `link:` 绝对路径要按目标机器改**（`dsh-fast-react`、UI 包、以及其它 link 插件）。
+5. 无固定端口，跟随 DSH 的 web 端口；不占用额外端口。
 
 ---
 

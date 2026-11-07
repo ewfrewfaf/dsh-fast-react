@@ -1,8 +1,9 @@
 // 诊断：读黑板步骤/状态/事件尾部 + 通过 HTTP 取插件状态（桌面路径写在脚本里，避免 soft-gate 拦截命令行）
 import fs from 'node:fs'
 import path from 'node:path'
+import { boardDir } from './paths.mjs'
 
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const port = process.argv[2] || '2859'
 const base = `http://127.0.0.1:${port}`
 

@@ -1,3 +1,4 @@
+import { boardDir } from './paths.mjs'
 // 定向验证：强制上交后台路径（免费模型）
 const port = process.argv[2] || '4847'
 const base = `http://127.0.0.1:${port}`
@@ -8,7 +9,7 @@ const j = async (p, opt) => {
 }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const evs = () => rd(board + '/events.jsonl').trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l) } catch { return {} } })
 

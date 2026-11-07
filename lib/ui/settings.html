@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>快速反应 · 设置</title>
+<style>
+  :root{
+    --bg:#0e0e10; --panel:#17171a; --panel2:#1d1d21; --line:#2a2a30;
+    --text:#e6e6ea; --dim:#8b8b95; --accent:#5b9dff; --ok:#3ecf8e; --warn:#f0b429; --bad:#ff5c5c;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:rgba(0,0,0,.55); backdrop-filter:blur(6px);
+    font:14px/1.5 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--text); display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    width:min(820px,100%); max-height:min(80vh,800px); background:var(--panel);
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.55);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line);
+    background:var(--panel2);
+  }
+  header h1{font-size:15px; font-weight:600; margin:0; letter-spacing:.02em}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto}
+  .chip{font-size:12px; color:var(--dim); border:1px solid var(--line); border-radius:999px; padding:3px 10px}
+  .chip b{color:var(--text); font-weight:600}
+  .close{border:1px solid var(--line); background:transparent; color:var(--dim); border-radius:8px;
+    padding:5px 12px; cursor:pointer; font-size:12px}
+  .close:hover{color:var(--text); border-color:#3a3a44}
+  main{overflow:auto; padding:8px 20px 20px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.16) transparent}
+  main:hover{scrollbar-color:rgba(255,255,255,.3) transparent}
+  main::-webkit-scrollbar{width:10px;height:10px}
+  main::-webkit-scrollbar-track{background:transparent}
+  main::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  main:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
+  section{margin-top:18px}
+  section > h2{
+    font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim);
+    margin:0 0 8px; font-weight:600;
+  }
+  .row{display:flex; align-items:center; gap:14px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.04)}
+  .row:last-child{border-bottom:0}
+  .row .label{flex:1; min-width:0}
+  .row .label .name{font-size:13px}
+  .row .label .hint{font-size:12px; color:var(--dim); margin-top:2px}
+  .row .ctl{flex:0 0 auto; display:flex; align-items:center; gap:8px}
+  /* 开关 */
+  .sw{position:relative; width:40px; height:22px; border-radius:999px; background:#33333a; cursor:pointer;
+    border:1px solid var(--line); transition:background .15s}
+  .sw::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+    background:#9a9aa4; transition:transform .15s, background .15s}
+  .sw.on{background:rgba(91,157,255,.28); border-color:rgba(91,157,255,.55)}
+  .sw.on::after{transform:translateX(18px); background:var(--accent)}
+  input[type=number],input[type=text],select{
+    background:#101013; color:var(--text); border:1px solid var(--line); border-radius:8px;
+    padding:6px 9px; font-size:13px; outline:none; font-family:inherit;
+  }
+  input[type=number]{width:110px; text-align:right}
+  input.text{width:230px}
+  input:focus,select:focus{border-color:rgba(91,157,255,.6)}
+  .modes{display:flex; gap:8px; flex-wrap:wrap}
+  .mode{border:1px solid var(--line); background:#101013; color:var(--dim); border-radius:8px;
+    padding:7px 14px; cursor:pointer; font-size:13px}
+  .mode:hover{color:var(--text)}
+  .mode.on{color:var(--text); border-color:rgba(91,157,255,.6); background:rgba(91,157,255,.12)}
+  footer{
+    display:flex; align-items:center; gap:10px; padding:12px 20px; border-top:1px solid var(--line);
+    background:var(--panel2); font-size:12px; color:var(--dim);
+  }
+  .toast{margin-left:auto; color:var(--ok); opacity:0; transition:opacity .2s}
+  .toast.show{opacity:1}
+  .toast.err{color:var(--bad)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:0 28px}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr} body{padding:10px} }
+</style>
+</head>
+<body>
+<div class="card" role="dialog" aria-label="快速反应设置">
+  <header>
+    <h1>快速反应 · 设置</h1>
+    <div class="chips" id="chips"></div>
+    <button class="close" id="closeBtn">关闭</button>
+  </header>
+
+  <main>
+    <section>
+      <h2>模式</h2>
+      <div class="row">
+        <div class="label"><div class="name">协作模式</div><div class="hint">速答/检索不惊动后台；编码才编排</div></div>
+        <div class="ctl"><div class="modes" id="modes"></div></div>
+      </div>
+      <div class="grid2">
+        <div class="row" data-k="modeAuto" data-type="bool">
+          <div class="label"><div class="name">自动判型</div><div class="hint">按任务文本自动选模式</div></div>
+          <div class="ctl"></div>
+        </div>
+        <div class="row" data-k="modeLocked" data-type="bool">
+          <div class="label"><div class="name">锁定模式</div><div class="hint">拒绝自动切换，只认手动</div></div>
+          <div class="ctl"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>性能档位</h2>
+      <div class="row">
+        <div class="label"><div class="name">tier</div>
+          <div class="hint">极速 = 前台 minimal / 后台 medium；极致 = 前台 high / 后台 max</div></div>
+        <div class="ctl"><div class="modes" id="tiers"></div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>运行开关</h2>
+      <div class="grid2" id="switches"></div>
+    </section>
+
+    <section>
+      <h2>节奏与预算</h2>
+      <div class="grid2" id="numbers"></div>
+    </section>
+
+    <section>
+      <h2>上下文</h2>
+      <div class="grid2" id="ctx"></div>
+    </section>
+
+    <section>
+      <h2>模型（留空 = 跟随全局）</h2>
+      <div class="row">
+        <div class="label"><div class="name">前台</div><div class="hint">快做。quick 模式下自动压到 minimal 思考</div></div>
+        <div class="ctl">
+          <input class="text" id="frontProvider" placeholder="provider">
+          <input class="text" id="frontModel" placeholder="model">
+        </div>
+      </div>
+      <div class="row">
+        <div class="label"><div class="name">后台</div><div class="hint">规划与复核</div></div>
+        <div class="ctl">
+          <input class="text" id="backProvider" placeholder="provider">
+          <input class="text" id="backModel" placeholder="model">
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="statusLine">加载中…</span>
+    <span class="toast" id="toast"></span>
+  </footer>
+</div>
+
+<script>
+ (function(){
+  // ★ 多实例：从自身地址反推基路径（/fr/settings → /fr，/fr_b/settings → /fr_b）
+  var BASE = (location.pathname.replace(/\/settings$/, '') || '/fr')
+  var CFG = {};
+  var STATUS = null;
+
+  function api(path, opt){
+    return fetch(path, Object.assign({headers:{'content-type':'application/json'}}, opt||{}))
+      .then(function(r){ return r.json(); });
+  }
+  function toast(text, isErr){
+    var el = document.getElementById('toast');
+    el.textContent = text;
+    el.className = 'toast show' + (isErr ? ' err' : '');
+    clearTimeout(el._t);
+    el._t = setTimeout(function(){ el.className = 'toast'; }, 1800);
+  }
+
+  // ── 控件定义（key / 标签 / 说明 / 单位）──────────────────────────────
+  var SWITCHES = [
+    ['enabled','启用插件','关掉后所有 tick 行为停止'],
+    ['pullSteps','拉取模式','前台干完自己读下一步，省掉 30s 等待'],
+    ['sentinelEnabled','机械哨兵','心跳停滞/连续失败/步数膨胀'],
+    ['stallWatchdog','僵死看门狗','150s 无活动自动 cancel'],
+    ['contextGuard','按角色压缩','前台 60k / 后台 600k 预算'],
+    ['batchAdapt','步长自适应','按最近耗时与失败调整批大小'],
+    ['preread','预读提示','预取时提示可先读的文件'],
+    ['workersEnabled','只读 worker','允许派生只读子任务（保守）'],
+    ['finalAudit','终局对照审','交付必须逐条对照验收标准'],
+    ['todoMirror','Todo 镜像','把 steps 同步成官方 todo 清单（插件写，逐轮刷新）'],
+    ['verboseLog','详细日志','写 .board/detail.jsonl，不参与判断'],
+    ['blockToolFold','禁用工具折叠','编排会话不折叠工具面（保缓存 + 保并行）'],
+    ['fanoutWorkers','扇形检索','retrieval 模式下发派发指令（关掉=前台自己并行查）'],
+    ['reviewDiffEnabled','后台审 diff','coding 模式让后台只读复核改过的文件'],
+    ['applyPatchPreset','apply_patch','挂 fast-react-front 预设（standard + apply_patch）'],
+    ['pollUnified','统一轮询','面板定时器合并成一个心跳（关掉=各模块各自 setInterval）'],
+    ['firstFrameEcho','首帧带原文','超时后把任务原文交给前台先推进（关掉=只做只读侦察）']
+  ];
+  var NUMBERS = [
+    ['batchSteps','每次投递步数','步/批'],
+    ['pipelinePrefetch','预取水位','剩余≤N 步提前规划'],
+    ['prefetchCooldownMs','预取冷却','ms'],
+    ['sentinelIntervalMs','tick 间隔','ms'],
+    ['heartbeatStaleMs','心跳停滞阈值','ms'],
+    ['stallTimeoutMs','僵死判定','ms'],
+    ['interruptCooldownMs','打断冷却','ms'],
+    ['interruptMaxPerTask','打断上限','次/任务'],
+    ['taskStepMax','步数膨胀阈值','步'],
+    ['finalAuditMaxRetry','验收补做上限','次'],
+    ['budgetWakes','每任务唤醒预算','次'],
+    ['workerMax','worker 并发上限','个']
+  ];
+  var CTX = [
+    ['frontContextLimit','前台上下文预算','token'],
+    ['backContextLimit','后台上下文预算','token']
+  ];
+
+  function rowEl(k, label, hint, type, unit){
+    var row = document.createElement('div');
+    row.className = 'row';
+    var l = document.createElement('div');
+    l.className = 'label';
+    var n = document.createElement('div'); n.className = 'name'; n.textContent = label;
+    var h = document.createElement('div'); h.className = 'hint'; h.textContent = hint + (unit ? '（' + unit + '）' : '');
+    l.appendChild(n); l.appendChild(h);
+    var c = document.createElement('div'); c.className = 'ctl';
+    row.appendChild(l); row.appendChild(c);
+    row._k = k; row._type = type; row._ctl = c;
+    return row;
+  }
+
+  function renderConfig(){
+    var sw = document.getElementById('switches');
+    var num = document.getElementById('numbers');
+    var ctx = document.getElementById('ctx');
+    sw.innerHTML = ''; num.innerHTML = ''; ctx.innerHTML = '';
+
+    SWITCHES.forEach(function(d){
+      var row = rowEl(d[0], d[1], d[2], 'bool');
+      var t = document.createElement('div');
+      t.className = 'sw' + (CFG[d[0]] ? ' on' : '');
+      t.setAttribute('role','switch');
+      t.setAttribute('aria-checked', CFG[d[0]] ? 'true' : 'false');
+      t.onclick = function(){
+        var next = !CFG[d[0]];
+        CFG[d[0]] = next;
+        t.className = 'sw' + (next ? ' on' : '');
+        t.setAttribute('aria-checked', next ? 'true' : 'false');
+        save(d[0], next);
+      };
+      row._ctl.appendChild(t);
+      sw.appendChild(row);
+    });
+
+    NUMBERS.forEach(function(d){
+      var row = rowEl(d[0], d[1], d[2], 'num', d[3]);
+      var i = document.createElement('input');
+      i.type = 'number'; i.min = '0'; i.step = '1000';
+      i.value = (CFG[d[0]] === undefined ? '' : CFG[d[0]]);
+      i.onchange = function(){ var v = Number(i.value); if (!isFinite(v)) return; CFG[d[0]] = v; save(d[0], v); };
+      row._ctl.appendChild(i);
+      num.appendChild(row);
+    });
+
+    CTX.forEach(function(d){
+      var row = rowEl(d[0], d[1], d[2], 'num', d[3]);
+      var i = document.createElement('input');
+      i.type = 'number'; i.min = '0'; i.step = '1000';
+      i.value = (CFG[d[0]] === undefined ? '' : CFG[d[0]]);
+      i.onchange = function(){ var v = Number(i.value); if (!isFinite(v)) return; CFG[d[0]] = v; save(d[0], v); };
+      row._ctl.appendChild(i);
+      ctx.appendChild(row);
+    });
+
+    // 模式按钮
+    var mEl = document.getElementById('modes');
+    mEl.innerHTML = '';
+    [['quick','速答'],['retrieval','检索'],['consult','咨询'],['coding','编码']].forEach(function(m){
+      var b = document.createElement('button');
+      b.className = 'mode' + (CFG.mode === m[0] ? ' on' : '');
+      b.textContent = m[1];
+      b.onclick = function(){
+        api(BASE + '/api/mode', {method:'POST', body: JSON.stringify({mode: m[0], by:'user'})})
+          .then(function(){ CFG.mode = m[0]; renderConfig(); toast('模式 → ' + m[1]); })
+          .catch(function(){ toast('切换失败', true); });
+      };
+      mEl.appendChild(b);
+    });
+
+    // 性能档位
+    var tEl = document.getElementById('tiers');
+    if (tEl) {
+      tEl.innerHTML = '';
+      [['speed','极速'],['balanced','平衡'],['max','极致']].forEach(function(t){
+        var b = document.createElement('button');
+        b.className = 'mode' + (((CFG.tier||'balanced')===t[0])?' on':'');
+        b.textContent = t[1];
+        b.onclick = function(){ CFG.tier = t[0]; save('tier', t[0]); renderConfig(); };
+        tEl.appendChild(b);
+      });
+    }
+    // 模型输入
+    ['frontProvider','frontModel','backProvider','backModel'].forEach(function(k){
+      var el = document.getElementById(k);
+      if (!el) return;
+      el.value = CFG[k] || '';
+      el.onchange = function(){
+        var v = el.value.trim();
+        var body = {}; body[k] = v; save(k, v);
+      };
+    });
+  }
+
+  function save(k, v){
+    var body = {}; body[k] = v;
+    api(BASE + '/api/config', {method:'POST', body: JSON.stringify(body)})
+      .then(function(r){
+        if (r && r.applied) toast('已保存：' + k);
+        else toast('已保存（未回显）');
+      })
+      .catch(function(){ toast('保存失败', true); });
+  }
+
+  function renderStatus(){
+    var chips = document.getElementById('chips');
+    var line = document.getElementById('statusLine');
+    if (!STATUS) return;
+    var mInfo = STATUS.mode || {};
+    var mode = mInfo.label || mInfo.mode || CFG.mode || '—';
+    var f = STATUS.front ? STATUS.front.phase : '—';
+    var b = STATUS.back ? STATUS.back.phase : '—';
+    var wakes = (STATUS.wakeTotal !== undefined) ? STATUS.wakeTotal : '—';
+    chips.innerHTML =
+      '<span class="chip">模式 <b>' + esc(mode) + '</b></span>' +
+      '<span class="chip">前台 <b>' + esc(f) + '</b></span>' +
+      '<span class="chip">后台 <b>' + esc(b) + '</b></span>' +
+      '<span class="chip">唤醒 <b>' + esc(wakes) + '</b></span>';
+    line.textContent = '改动即时保存到 .board/config.json';
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  function refresh(){
+    api(BASE + '/api/config').then(function(r){
+      CFG = (r && r.cfg) || {};
+      if (STATUS && STATUS.mode) CFG.mode = STATUS.mode.mode || CFG.mode;
+      renderConfig();
+    }).catch(function(){ toast('读配置失败', true); });
+    api(BASE + '/api/status').then(function(r){ STATUS = r; renderStatus(); }).catch(function(){});
+  }
+
+  // 嵌在官方页面（iframe）里时没有"关闭"这一说——用户用左侧导航切走；独立打开时才显示关闭
+  if (window.self !== window.top) {
+    // 作为浮层 iframe 打开时：去掉自己的遮罩，卡片铺满浮层
+    var cb = document.getElementById('closeBtn'); if (cb) cb.style.display = 'none';
+    document.body.style.background = 'transparent';
+    document.body.style.backdropFilter = 'none';
+    document.body.style.padding = '0';
+    var card = document.querySelector('.card');
+    if (card) { card.style.width = '100%'; card.style.maxHeight = 'none'; card.style.height = '100%'; card.style.border = '0'; card.style.borderRadius = '0'; card.style.boxShadow = 'none'; }
+  }
+  document.getElementById('closeBtn').onclick = function(){
+    // 嵌在官方页面里时：退回上一个入口（历史长度 >1 说明是从别处点进来的）
+    if (history.length > 1) history.back();
+    else location.href = 'about:blank';
+  };
+
+  refresh();
+  setInterval(refresh, 5000);
+})();
+</script>
+</body>
+</html>

@@ -1,5 +1,16 @@
 // UI/API 审计：页面结构、接口契约、错误路径
-const port = process.argv[2] || '4099'
+// ★ 2026-11-07：端口自动探测（DSH web 每次启动端口会变，写死会造出整屏假失败）
+const CANDIDATES = ['1890', '11296', '2204', '7408', '3557', '9148', '10304', '13889', '7754', '19387', '4099', '5239', '7351', '3633']
+async function detectPort () {
+  for (const p of CANDIDATES) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${p}/fr/api/status`, { signal: AbortSignal.timeout(1200) })
+      if (r.ok || r.status === 401 || r.status === 403) return p
+    } catch { /* 下一个 */ }
+  }
+  return null
+}
+const port = process.argv[2] || (await detectPort()) || '13889'
 const base = `http://127.0.0.1:${port}`
 const j = async (p, opt) => {
   try {
@@ -59,7 +70,7 @@ const bad2 = await j('/fr/api/task', { method: 'POST', headers: { 'content-type'
 add('无效 sessionId 应 4xx', bad2.status >= 400 && bad2.status < 500, `HTTP ${bad2.status}`)
 const bad3 = await j('/fr/api/session?id=nope')
 add('无效 session 查询应 404', bad3.status === 404, `HTTP ${bad3.status}`)
-const bad4 = await j('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: 'FR-99', preset: 'x' }) })
+const bad4 = await j('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'policy', key: 'FR-NONEXISTENT-ZZZ', preset: 'x' }) })
 add('无效组 policy 应报错', !!(bad4.json && bad4.json.error), JSON.stringify(bad4.json || {}).slice(0, 60))
 const bad5 = await j('/fr/api/groups', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'zzz' }) })
 add('未知 action 应 400', bad5.status === 400, `HTTP ${bad5.status}`)

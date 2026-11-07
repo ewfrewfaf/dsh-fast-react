@@ -1,3 +1,5 @@
+import { boardDir, boardRoot } from './paths.mjs'
+import { join } from 'node:path'
 // 最终验收：免费模型跑完整「前台→上交→后台规划→执行→交付」链路
 const port = process.argv[2] || '4847'
 const base = `http://127.0.0.1:${port}`
@@ -8,7 +10,7 @@ const j = async (p, opt) => {
 }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 
 let st = await j('/fr/api/status')
@@ -65,6 +67,6 @@ if (marks.finalAnswer) console.log('--- 交付正文 ---\n' + marks.finalAnswer.
 
 // 检查产出文件
 console.log('\n=== 产出物 ===')
-for (const p of ['C:/Users/admin/Desktop/test-fr/a.txt', 'C:/Users/admin/Desktop/test-fr/b.txt', 'C:/Users/admin/Desktop/test-fr/README.md']) {
+for (const p of [join(boardRoot(), 'test-fr/a.txt'), join(boardRoot(), 'test-fr/b.txt'), join(boardRoot(), 'test-fr/README.md')]) {
   try { console.log('✅', p, '=', JSON.stringify(fs.readFileSync(p, 'utf8').slice(0, 40))) } catch { console.log('❌', p, '不存在') }
 }
