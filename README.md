@@ -40,6 +40,11 @@
 
 ---
 
+## 🆕 v1.6.2（2026-11-15）
+
+- **热重载修复**：路由改为每进程注册一次 + 可变 app 引用转发（`globalThis.__frApp_<tag>`）。此前每 fiber 注册闭包，热重载后旧闭包仍占路由 ⇒ 改 host 代码必须重启 DSH；**1.6.2 起 `dev_reload_package` 即时生效，无需重启**（首次从 ≤1.6.1 升级仍需重启一次以清除旧路由注册）。
+- `status.buildTag` 探针：每次 apply 新时间戳，可验证热重载是否换掉路由闭包。
+
 ## 🆕 v1.6.1（2026-11-15）
 
 - **修复自动判型死导入**：`detectMode` 此前从未被任务投递路径调用 ⇒ 检索/咨询/审查任务永远停留 quick。现在投递时先认意图（retrieval/consult/review 命中即自动切换），其余落编排判据；`modeLocked`/pin/显式 mode 优先级不变。新增 `tools/test-mode-intent.mjs` 8 例回归。
