@@ -40,6 +40,10 @@
 
 ---
 
+## 🆕 v1.6.1（2026-11-15）
+
+- **修复自动判型死导入**：`detectMode` 此前从未被任务投递路径调用 ⇒ 检索/咨询/审查任务永远停留 quick。现在投递时先认意图（retrieval/consult/review 命中即自动切换），其余落编排判据；`modeLocked`/pin/显式 mode 优先级不变。新增 `tools/test-mode-intent.mjs` 8 例回归。
+
 ## 🆕 v1.6.0（2026-11-15）
 
 | 变更 | 说明 |

@@ -289,6 +289,7 @@ const codeChecks = {
   '单配置文件补齐': /单配置文件/.test(src),
   '组编号含归档台账': /\[\.\.\.list, \.\.\.loadArchived\(\)\]/.test(src),
   '恢复收敛同号归档': /arch\.filter\(\(x\) => x\.key !== key\)/.test(src),
+  '意图自动切换(1.6.1)': /detect-intent/.test(src) && /const dm = detectMode\(body\)/.test(src),
   '发送键按真实 phase': /d\.front\.phase === 'running'/.test(page),
   '批量 loading': /gmBusy\(true/.test(page),
   '归档区渲染': /gmArchived/.test(page),
