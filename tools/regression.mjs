@@ -145,13 +145,13 @@ const codeChecks = {
   'briefs 要求响应催补': /milestone-gap 催补/.test(fs.readFileSync(root + '/lib/briefs.js', 'utf8')),
   // ★ 2026-11-07 催补链路修复（根因：deliver 残留堵死缺口检查）
   'checkLookahead 缺口检查在 hasDeliver 之前': (() => {
-    const i = src.indexOf('function checkLookahead')
+    const i = all.indexOf('function checkLookahead')
     if (i < 0) return false
-    const body = src.slice(i, i + 2000)
+    const body = all.slice(i, i + 2000)
     // 只看"非注释行"，否则会匹配到解释原顺序的注释
     const codeLines = body.split('\n').filter(l => !/^\s*(?:\/\/|\*)/.test(l)).join('\n')
     const gap = codeLines.indexOf('routeMilestoneCount()')
-    const dv = codeLines.search(/if\s*\(\s*hasDeliver\(\)\s*\)\s*return/)
+    const dv = codeLines.search(/if\s*\(\s*(?:D\.)?hasDeliver\(\)\s*\)\s*return/)
     return gap >= 0 && dv >= 0 && gap < dv
   })(),
   '新任务清理旧 deliver': /deliver-cleared/.test(all),
@@ -213,8 +213,8 @@ const codeChecks = {
   // ★ 2026-11-07 冷却策略重写（45s 固定冷却把后台 87% 时间耗在空等）
   '缺口驱动冷却函数存在': /function prefetchCooldownFor/.test(all),
   '缺口冷却 ≤3s': /if\s*\(gap\)\s*return\s*2000/.test(all),
-  '三处冷却都用新函数': (src.match(/prefetchCooldownFor\(/g) || []).length >= 3,
-  '缺口不再被 hasDeliver 挡住': /!hasDeliver\(\)\s*\|\|\s*gapNow/.test(all),
+  '三处冷却都用新函数': (all.match(/prefetchCooldownFor\(/g) || []).length >= 3,
+  '缺口不再被 hasDeliver 挡住': /!\s*(?:D\.)?hasDeliver\(\)\s*\|\|\s*gapNow/.test(all),
   '新任务打断后台': /back-cancelled/.test(all),
   'defaults 冷却已降': !/prefetchCooldownMs:\s*45000/.test(fs.readFileSync(root + '/lib/defaults.js', 'utf8')),
   'briefs 产到水位': /产到水位再停/.test(fs.readFileSync(root + '/lib/briefs.js', 'utf8')),
@@ -232,10 +232,10 @@ const codeChecks = {
   // ② 里程碑单调性（防"永远补不完"）
   '里程碑不许外扩': /milestone-inflation-blocked/.test(all),
   '里程碑截断在 lines 之前': (() => {
-    const i = src.indexOf('function renderRoute')
+    const i = all.indexOf('function renderRoute')
     if (i < 0) return false
     // 用全文件行号比较，避免切片窗口被新增代码挤出
-    const seg = src.slice(i)
+    const seg = all.slice(i)
     const inflIdx = seg.indexOf('milestone-inflation-blocked')
     const pushIdx = seg.indexOf("lines.push('## 里程碑')")
     return inflIdx >= 0 && pushIdx >= 0 && inflIdx < pushIdx
