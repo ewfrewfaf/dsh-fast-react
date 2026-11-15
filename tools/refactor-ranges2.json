@@ -62,7 +62,7 @@
       "注：K.scopePatched/K.globalRegistered 初始化留 index 且先于工厂调用（factoryAtEnd）；B10/B11 留 index"
     ],
     "move": [
-      { "s": 2615, "e": 3278, "first": "给模型/面板用的只读自检工具", "last": "})" }
+      { "s": 1942, "e": 2605, "first": "给模型/面板用的只读自检工具", "last": "})" }
     ],
     "stay": [],
     "factoryAtEnd": true

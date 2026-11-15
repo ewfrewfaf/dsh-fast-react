@@ -199,7 +199,7 @@ const codeChecks = {
   '全局工具 fr_brake': /globalRegister\(\{[\s\S]{0,300}TN\('fr_brake'\)/.test(all),
   'fr_task 支持组寻址': /group: \{ type: 'string', description: '精确投递到某个会话组/.test(all),
   'fr_task 支持模式指定': /mode_strict: \{/.test(all) && /enum: \['auto', 'quick', 'consult', 'retrieval', 'review', 'coding'\]/.test(all),
-  'scope 跳过 fr_status': /if \(nm === TN\('fr_status'\)\) continue/.test(all),
+  'scope 跳过 fr_status': /if \(nm === (?:D\.)?TN\('fr_status'\)\) continue/.test(all),
   'fr 工具不进全局': /const FR_TOOL_DEFS = \[\]/.test(all) && /FR_TOOL_DEFS\.push\(def\)/.test(all),
   'scope 注册在 restrict 之前': (() => { const a = src.indexOf('registerFrToolsTo(ag, role)'); const b = src.indexOf('tools.restrict({ allow })'); return a > 0 && b > 0 && a < b })(),
   '强信号放宽前缀': /并发可读写|支持\|可\|实现\|保证/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')) || /崩溃可恢复/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
