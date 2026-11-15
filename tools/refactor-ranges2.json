@@ -1,0 +1,70 @@
+{
+  "runtime": {
+    "file": "runtime.js",
+    "factory": "makeRuntime",
+    "v": "RT",
+    "title": "runtime.js —— 通道(wake/steer/预算) + heartbeat/todo 镜像 + 实时投递 + 终局审计 + fr_route/renderRoute + 催单 + B6 投递/M19 拆分",
+    "marker": "通道 wakeBack/steerFront/干扰预算 + heartbeat/todo 镜像 + 实时投递 + renderRoute/checkLookahead + B6/M19",
+    "map": [
+      "通道：noteWakeBudget/prefetchCooldownFor/flushWakeBatch/WAKE_POLICY/appendToolSummary/resultErrorText/isCallContractError/wakeBack/steerFront（wakeCount 随之）",
+      "todo 镜像：buildTodoSnapshot/syncTodos/maybeReviewDiff/queueTodoSync",
+      "heartbeat：synthHeartbeat",
+      "实时投递：startStepsWatcher（fs.watch）",
+      "终局：routeMilestoneCount/routeAcceptance/buildFinalPrompt/deliverAudit/checkFinalAudit",
+      "fr_route：renderRoute/ensureRouteMilestones/frontThoughtTail/judgePendingOnDisk/checkLookahead",
+      "B6/M19：MIN_STEP_CHARS/SETTLE_MS/splitBatchFile/checkVerdict/annotateSteps/checkNewSteps",
+      "注：K.* 初始化、toolStats/reworkTrail、SB/B/Sched 调度装配、presetName/BUILD_TAG/CONFIG_KEYS 仍留 index"
+    ],
+    "move": [
+      { "s": 781, "e": 1017, "first": "const wakeCount", "last": "}" },
+      { "s": 1129, "e": 1135, "first": "B3 heartbeat 合成", "last": "这不是第二真相源" },
+      { "s": 1160, "e": 1224, "first": "function buildTodoSnapshot", "last": "}" },
+      { "s": 1238, "e": 1243, "first": "const synthHeartbeat", "last": "}" },
+      { "s": 1431, "e": 1551, "first": "实时投递（首帧杀手）", "last": "}" },
+      { "s": 1553, "e": 1901, "first": "fr_route：结构化提交路线", "last": "}" },
+      { "s": 1903, "e": 1947, "first": "B6 新步骤到达", "last": "}" },
+      { "s": 1949, "e": 2017, "first": "后台分诊否决", "last": "}" },
+      { "s": 2055, "e": 2252, "first": "function annotateSteps", "last": "}" }
+    ],
+    "stay": []
+  },
+  "api-app": {
+    "file": "api-app.js",
+    "factory": "makeApiApp",
+    "v": "AA",
+    "title": "api-app.js —— apiApp 剩余 glue（status/task intake/config/models/mode/events/HTTP 中继）",
+    "marker": "apiApp 剩余方法（组方法/T3 方法仍 spread 自 GR.api/GD.api）",
+    "map": [
+      "apiApp 对象字面量整体抽出为 api；...GD.api / ...GR.api 两行留在 index 重组",
+      "index：const AA = makeApiApp(D); const apiApp = { ...AA, ...GR.api, ...GD.api }",
+      "注：presetName/BUILD_TAG/CONFIG_KEYS 仍在 index，经 D 调用"
+    ],
+    "move": [
+      { "s": 2275, "e": 2951, "first": "const apiApp = {", "last": "}" }
+    ],
+    "stay": [],
+    "object": {
+      "varName": "apiApp",
+      "drop": ["...GD.api,", "...GR.api,"],
+      "indexReplace": "  const apiApp = { ...AA, ...GR.api, ...GD.api }"
+    }
+  },
+  "tools-reg": {
+    "file": "tools-reg.js",
+    "factory": "makeToolsReg",
+    "v": "TR",
+    "title": "tools-reg.js —— 全部工具注册（全局入口 fr_task/fr_status/fr_brake + 内部角色 fr_mode/fr_worker/fr_poke/fr_route/fr_escalate + scope 注册）",
+    "marker": "自检/全局入口/内部角色工具 + safeRegister/registerFrToolsTo/globalRegister",
+    "map": [
+      "frOnlyGate（历史 when 方案遗留）/FR_TOOL_DEFS/scopeRegistered",
+      "safeRegister（收集定义）/registerFrToolsTo（注册进 agent scope）/globalRegister（全局注册）",
+      "全局入口：fr_task/fr_status/fr_brake；内部角色：fr_status/fr_mode/fr_worker/fr_poke/fr_route/fr_escalate",
+      "注：K.scopePatched/K.globalRegistered 初始化留 index 且先于工厂调用（factoryAtEnd）；B10/B11 留 index"
+    ],
+    "move": [
+      { "s": 3696, "e": 4359, "first": "给模型/面板用的只读自检工具", "last": "}" }
+    ],
+    "stay": [],
+    "factoryAtEnd": true
+  }
+}

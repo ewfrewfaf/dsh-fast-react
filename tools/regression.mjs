@@ -70,8 +70,8 @@ try {
 // 4) 代码关键修复点存在性
 const src = fs.readFileSync(root + '/lib/index.js', 'utf8')
 // ★ #8 拆分后：部分关键逻辑迁到 lib/*.js，静态审计要覆盖全模块（否则误报"缺失"）
-const mods = ['board.js', 'state.js', 'delivery.js', 'scheduler.js', 'sentinels.js', 'kernel.js', 'modes.js', 'defaults.js',
-  'groups.js', 'guards.js', 'mode-auto.js']
+const mods = ['board.js', 'scheduler.js', 'modes.js', 'defaults.js', 'briefs.js', 'policies.js', 'route-plan.js',
+  'groups.js', 'guards.js', 'mode-auto.js', 'runtime.js', 'api-app.js', 'tools-reg.js']
   .map((f) => { try { return fs.readFileSync(root + '/lib/' + f, 'utf8') } catch { return '' } })
   .join('\n')
 const all = src + '\n' + mods
@@ -96,7 +96,7 @@ const codeChecks = {
     return !!m && !m[1].includes('fr_route')
   })(),
   // 身份判定：worker 不得被当成编排会话（递归环 2）
-  'worker 不被认作 fr 会话': /if\s*\(\s*\/\^worker-\/\.test\(rest\)\s*\)\s*return false/.test(src),
+  'worker 不被认作 fr 会话': /if\s*\(\s*\/\^worker-\/\.test\(rest\)\s*\)\s*return false/.test(all),
   // 工具面随会话重建即时挂载（本 bug 主体，窗口必须为 0）
   '重建即时挂工具面': (src.match(/attachToolPolicyFor\(tag, ag\)/g) || []).length >= 2,
   // ★ 强制：**每一个** svcAgentLoop.create 后 10 行内必须有挂载动作，
@@ -115,7 +115,7 @@ const codeChecks = {
     return true
   })(),
   '去重分支仍重挂': /(?:K\.)?activeMode === p\.key[\s\S]{0,400}reapplyToolPolicyIfNeeded/.test(all),
-  'resolveAgents 末尾重挂': /reapplyToolPolicyIfNeeded\(\)[\s\S]{0,200}\}/.test(src),
+  'resolveAgents 末尾重挂': /reapplyToolPolicyIfNeeded\(\)[\s\S]{0,200}\}/.test(all),
   // TDZ：modeDisposers 必须先于 resolveAgents 声明
   'modeDisposers 无 TDZ': (() => {
     const d = src.indexOf('const modeDisposers')
@@ -124,15 +124,15 @@ const codeChecks = {
   })(),
   // ★ 2026-11-07 route 污染守卫：rebuildSessions 绝不能把 resolveRoute 的 base 写回 cfg
   //   （那会把 buddy/glm 固化成前后台 base，导致会话被静默换模型 + 返回值谎报）
-  'rebuild 不污染全局路由': !/overrides\.provider\s*=\s*route\.provider/.test(src),
-  'rebuild 按角色取路由': /effRoute\s*=\s*\(tag\)[\s\S]{0,120}routeFor\(tag\)/.test(src),
+  'rebuild 不污染全局路由': !/overrides\.provider\s*=\s*route\.provider/.test(all),
+  'rebuild 按角色取路由': /effRoute\s*=\s*\(tag\)[\s\S]{0,120}routeFor\(tag\)/.test(all),
   // 可移植：lib 不得有硬编码用户路径（注释除外，故只查非注释行）
   'lib 无硬编码用户路径': !(src.split(/\r?\n/) || []).some(l => !/^\s*(?:\/\/|\*)/.test(l) && /C:[\\/]Users[\\/](?!admin\.\.\.)[a-z]/i.test(l)),
   'tools 有 paths.mjs': fs.existsSync(root + '/tools/paths.mjs'),
   'boardRoot 可移植': /FAST_REACT_BOARD/.test(mods) && /DSH_HOME/.test(mods),
   // ★ 多实例工具名本地化：简报与模式说明都必须走 localizeToolNames
-  '有 localizeToolNames': /function localizeToolNames/.test(src),
-  'brief 走本地化': /function brief[\s\S]{0,400}localizeToolNames\(text\)/.test(src),
+  '有 localizeToolNames': /function localizeToolNames/.test(all),
+  'brief 走本地化': /function brief[\s\S]{0,400}localizeToolNames\(text\)/.test(all),
   'modeNotice 走本地化': /localizeToolNames\(modeNotice\(/.test(all),
   // ★ 2026-11-07 归档缺口守卫（实测：23 次归档 18 次有「里程碑>步骤」缺口，
   //   milestone-gap 事件 0 条 —— 催补机制从未生效，因为任务在 19s 内就归档了）
@@ -141,7 +141,7 @@ const codeChecks = {
   'board 导出 routeMilestoneCount': /routeMilestoneCount/.test(fs.readFileSync(root + '/lib/board.js', 'utf8')),
   // 判据要排除注释行（修复说明里引用了原句，会误报）
   '预规划不再诱导写 deliver': !(src.split('\n').some(l => !/^\s*(?:\/\/|\*)/.test(l) && /若任务.{0,6}接近完成.{0,10}写.{0,20}deliver/.test(l))),
-  'route 后即时催补': /route-gap-immediate/.test(src),
+  'route 后即时催补': /route-gap-immediate/.test(all),
   'briefs 要求响应催补': /milestone-gap 催补/.test(fs.readFileSync(root + '/lib/briefs.js', 'utf8')),
   // ★ 2026-11-07 催补链路修复（根因：deliver 残留堵死缺口检查）
   'checkLookahead 缺口检查在 hasDeliver 之前': (() => {
@@ -154,13 +154,13 @@ const codeChecks = {
     const dv = codeLines.search(/if\s*\(\s*hasDeliver\(\)\s*\)\s*return/)
     return gap >= 0 && dv >= 0 && gap < dv
   })(),
-  '新任务清理旧 deliver': /deliver-cleared/.test(src),
+  '新任务清理旧 deliver': /deliver-cleared/.test(all),
   '归档时清理 deliver': /deliver-cleared/.test(fs.readFileSync(root + '/lib/scheduler.js', 'utf8')),
-  '催补计数随任务重置': /if \(a === (?:K\.)?front && !isSteerInsert\) \{[\s\S]{0,300}(?:K\.)?milestoneGapCount\s*=\s*0/.test(src),
-  'API 任务一律清场': /const isApiTask = !!\(opts && opts\.external\)/.test(src) && /external: true/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
+  '催补计数随任务重置': /if \(a === (?:K\.)?front && !isSteerInsert\) \{[\s\S]{0,300}(?:K\.)?milestoneGapCount\s*=\s*0/.test(all),
+  'API 任务一律清场': /const isApiTask = !!\(opts && opts\.external\)/.test(all) && /external: true/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
   // ★ 2026-11-08 判型修复：modeBy==='user' 不该永久阻断自动判型
   '判型不被 by=user 永久阻断': /modeBy === 'user' && isSameTask/.test(all),
-  '判型有独立文本记录': /let lastDetectText|K\.lastDetectText = ''/.test(src),
+  '判型有独立文本记录': /let lastDetectText|K\.lastDetectText = ''/.test(all),
   '判型后记录文本': /lastDetectText = thisText/.test(all),
   // ★ 2026-11-08 判型 v2 + 分诊 + 刹车 + review 模式
   '判型v2：三档判定': /tend === 'coding'|tend = 'gray'/.test(mods) && /THRESHOLD_HIGH/.test(mods),
@@ -168,19 +168,19 @@ const codeChecks = {
   '判型v2：层内封顶': /LAYER_CAP/.test(mods),
   '判型v2：灰区分诊': /triage-woken/.test(all) && /wakeBack\('triage'/.test(all),
   '判型v2：显式模式参数': /mode-explicit/.test(all) && /opts\.mode_strict/.test(all),
-  '判型v2：pin 锁定': /modePinned/.test(src) && /mode-pinned/.test(src),
+  '判型v2：pin 锁定': /modePinned/.test(all) && /mode-pinned/.test(all),
   '判型v2：API mode 参数': /extraOpts\.mode/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
   '兜底：25 工具自动升级': /auto-upgrade/.test(all) && /stepsThisTask > 25/.test(all),
   'review 模式存在': /key: 'review'/.test(mods),
   'review 判型意图': /REVIEW_INTENT/.test(mods),
   '刹车 API': /\/api\/brake/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
   '解除刹车 API': /\/api\/unbrake/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
-  'unbrake 方法': /unbrake \(\)/.test(src),
-  'brake 方法': /brake \(scope/.test(src),
+  'unbrake 方法': /unbrake \(\)/.test(all),
+  'brake 方法': /brake \(scope/.test(all),
   // ★ 2026-11-08 三项补完
   '刹车按钮 UI': /btnBrake/.test(fs.readFileSync(root + '/lib/ui/page.html', 'utf8')),
   '刹车按钮事件绑定': /post\('\/brake'/.test(fs.readFileSync(root + '/lib/ui/page.html', 'utf8')),
-  '分诊回执(route→升级)': /triage-upgraded/.test(src),
+  '分诊回执(route→升级)': /triage-upgraded/.test(all),
   'review 模式简报(前台)': /只读不改/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   'review 模式简报(后台)': /规划审什么/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   // ★ 2026-11-08 A 方案：coding 模式强制上交
@@ -192,30 +192,30 @@ const codeChecks = {
   // ★ 2026-11-08 模式判决微调
   '对比归 consult': /优缺点\|对比\|方案对比/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   // ★ 2026-11-08 工具作用域：fr_* 只对快速反应会话可见
-  'fr_* 按 agent scope 注册': /function registerFrToolsTo/.test(src) && /tools\.register\(def\)/.test(src),
+  'fr_* 按 agent scope 注册': /function registerFrToolsTo/.test(all) && /tools\.register\(def\)/.test(all),
   // ★ 2026-11-08 全局入口工具（任何会话可用）
-  '全局工具 fr_task': /globalRegister\(\{[\s\S]{0,300}TN\('fr_task'\)/.test(src),
-  '全局工具 fr_status': /globalRegister\(\{[\s\S]{0,300}TN\('fr_status'\)/.test(src),
-  '全局工具 fr_brake': /globalRegister\(\{[\s\S]{0,300}TN\('fr_brake'\)/.test(src),
-  'fr_task 支持组寻址': /group: \{ type: 'string', description: '精确投递到某个会话组/.test(src),
-  'fr_task 支持模式指定': /mode_strict: \{/.test(src) && /enum: \['auto', 'quick', 'consult', 'retrieval', 'review', 'coding'\]/.test(src),
-  'scope 跳过 fr_status': /if \(nm === TN\('fr_status'\)\) continue/.test(src),
-  'fr 工具不进全局': /const FR_TOOL_DEFS = \[\]/.test(src) && /FR_TOOL_DEFS\.push\(def\)/.test(src),
+  '全局工具 fr_task': /globalRegister\(\{[\s\S]{0,300}TN\('fr_task'\)/.test(all),
+  '全局工具 fr_status': /globalRegister\(\{[\s\S]{0,300}TN\('fr_status'\)/.test(all),
+  '全局工具 fr_brake': /globalRegister\(\{[\s\S]{0,300}TN\('fr_brake'\)/.test(all),
+  'fr_task 支持组寻址': /group: \{ type: 'string', description: '精确投递到某个会话组/.test(all),
+  'fr_task 支持模式指定': /mode_strict: \{/.test(all) && /enum: \['auto', 'quick', 'consult', 'retrieval', 'review', 'coding'\]/.test(all),
+  'scope 跳过 fr_status': /if \(nm === TN\('fr_status'\)\) continue/.test(all),
+  'fr 工具不进全局': /const FR_TOOL_DEFS = \[\]/.test(all) && /FR_TOOL_DEFS\.push\(def\)/.test(all),
   'scope 注册在 restrict 之前': (() => { const a = src.indexOf('registerFrToolsTo(ag, role)'); const b = src.indexOf('tools.restrict({ allow })'); return a > 0 && b > 0 && a < b })(),
   '强信号放宽前缀': /并发可读写|支持\|可\|实现\|保证/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')) || /崩溃可恢复/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
-  'quick 上交不被拒': !/当前模式「\$\{mi\.label\}」不需要后台：请自己完成并交付/.test(src) || /escalate-auto-upgrade/.test(src),
+  'quick 上交不被拒': !/当前模式「\$\{mi\.label\}」不需要后台：请自己完成并交付/.test(all) || /escalate-auto-upgrade/.test(all),
   '共识协议拆分': /共识协议实现/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   'coding 覆盖通用分诊': /覆盖上式/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
-  'coding 执行层督促': /must-escalate-nudge/.test(src),
-  'esc 时间戳记录': /lastEscalateAt = Date\.now\(\)/.test(src),
+  'coding 执行层督促': /must-escalate-nudge/.test(all),
+  'esc 时间戳记录': /lastEscalateAt = Date\.now\(\)/.test(all),
   'esc 时间戳重置': /(?:K\.)?autoUpgradedThisTask = false; (?:K\.)?lastEscalateAt = 0/.test(all),
-  '分诊穿透 quick 守卫': /BYPASS = new Set\('manual', 'triage', 'auto-upgrade'\)/i.test(src) || /'triage', 'auto-upgrade'/.test(src),
+  '分诊穿透 quick 守卫': /BYPASS = new Set\('manual', 'triage', 'auto-upgrade'\)/i.test(all) || /'triage', 'auto-upgrade'/.test(all),
   // ★ 2026-11-07 冷却策略重写（45s 固定冷却把后台 87% 时间耗在空等）
-  '缺口驱动冷却函数存在': /function prefetchCooldownFor/.test(src),
-  '缺口冷却 ≤3s': /if\s*\(gap\)\s*return\s*2000/.test(src),
+  '缺口驱动冷却函数存在': /function prefetchCooldownFor/.test(all),
+  '缺口冷却 ≤3s': /if\s*\(gap\)\s*return\s*2000/.test(all),
   '三处冷却都用新函数': (src.match(/prefetchCooldownFor\(/g) || []).length >= 3,
-  '缺口不再被 hasDeliver 挡住': /!hasDeliver\(\)\s*\|\|\s*gapNow/.test(src),
-  '新任务打断后台': /back-cancelled/.test(src),
+  '缺口不再被 hasDeliver 挡住': /!hasDeliver\(\)\s*\|\|\s*gapNow/.test(all),
+  '新任务打断后台': /back-cancelled/.test(all),
   'defaults 冷却已降': !/prefetchCooldownMs:\s*45000/.test(fs.readFileSync(root + '/lib/defaults.js', 'utf8')),
   'briefs 产到水位': /产到水位再停/.test(fs.readFileSync(root + '/lib/briefs.js', 'utf8')),
   // ★ 2026-11-07 三个遗留问题修复
@@ -230,7 +230,7 @@ const codeChecks = {
     return !!m
   })(),
   // ② 里程碑单调性（防"永远补不完"）
-  '里程碑不许外扩': /milestone-inflation-blocked/.test(src),
+  '里程碑不许外扩': /milestone-inflation-blocked/.test(all),
   '里程碑截断在 lines 之前': (() => {
     const i = src.indexOf('function renderRoute')
     if (i < 0) return false
@@ -241,39 +241,39 @@ const codeChecks = {
     return inflIdx >= 0 && pushIdx >= 0 && inflIdx < pushIdx
   })(),
   // ③ 新任务清场（steps/route/state）
-  '新任务清 steps': /task-cleared/.test(src),
-  '新任务清 route': /route\.\$\{Date\.now\(\)\}\.md/.test(src),
+  '新任务清 steps': /task-cleared/.test(all),
+  '新任务清 route': /route\.\$\{Date\.now\(\)\}\.md/.test(all),
   // ★ 2026-11-07 改法 A+B：催补即时化 + 补步优先
-  'turn-stopping 缺口时不等后台空闲': /const shouldWake = \(gapIdle \|\| !backBusy\)/.test(src),
-  '补步类 reason 优先 followup': /REPAIR_REASONS/.test(src),
+  'turn-stopping 缺口时不等后台空闲': /const shouldWake = \(gapIdle \|\| !backBusy\)/.test(all),
+  '补步类 reason 优先 followup': /REPAIR_REASONS/.test(all),
   'need-next 属关键唤醒': /need-next/.test(fs.readFileSync(root + '/lib/policies.js', 'utf8')),
   'prefetch-urgent 属关键唤醒': /prefetch-urgent/.test(fs.readFileSync(root + '/lib/policies.js', 'utf8')),
-  'wire() 统一接线': src.includes('const wire = (frontId, backId)'),
-  'effort 显式传': src.includes('reasoningEffort: effortFor(tag)'),
+  'wire() 统一接线': all.includes('const wire = (frontId, backId)'),
+  'effort 显式传': all.includes('reasoningEffort: effortFor(tag)'),
   'BOM 已除': !fs.readFileSync(root + '/package.json').slice(0, 3).equals(Buffer.from([0xEF, 0xBB, 0xBF])),
-  '预规划（投递后即时）': src.includes("trigger: 'step-delivered'"),
+  '预规划（投递后即时）': all.includes("trigger: 'step-delivered'"),
   '无任务不跑哨兵': all.includes('hasActiveTask'),
   'H5 需伴随失败': all.includes('taskStepMax') && all.includes('failStreak >= 2'),
-  '同名工具失败才累加': src.includes('lastFailName'),
-  '尊重用户走编排': src.includes('verdict-short-overruled'),
+  '同名工具失败才累加': all.includes('lastFailName'),
+  '尊重用户走编排': all.includes('verdict-short-overruled'),
   '冻结只调一次': (all.match(/freezeFront\(hits\.map/g) || []).length === 1,
-  '终局正文兜底': src.includes('final-answer-ask'),
-  '新路线重置 done': src.includes('state-reset'),
+  '终局正文兜底': all.includes('final-answer-ask'),
+  '新路线重置 done': all.includes('state-reset'),
   'wiring 健康度字段': api.includes("state,") && api.includes('frontMatched'),
   'policy 语义正确': api.includes('if (r && r.error) return fail(res, 404'),
   '面板显示自愈中': page.includes("自愈中…"),
   '不渲染 chat.back': !/chat\.back \|\| \[\]\)\.forEach/.test(page),
   // ★ 2026-11-07 第三轮优化（五项改动）的守卫
-  'fr_route 有 mode 参数': /enum: \['plan', 'append'\]/.test(src),
-  'append 模式不覆写 route': /mode === 'append' && existsSync\(P\.route\)/.test(src),
-  'append 跳过已有步骤': /existingKs: Array\.from\(existingSteps\)/.test(src),
-  'plan 跳过已完成步骤': /ovd\.skip\(k\)/.test(src) && /doneNo > 0 &&/.test(fs.readFileSync(root + '/lib/route-plan.js', 'utf8')),
-  'append 不清 steps': /if \(wrote && !isAppend\)/.test(src),
+  'fr_route 有 mode 参数': /enum: \['plan', 'append'\]/.test(all),
+  'append 模式不覆写 route': /mode === 'append' && existsSync\(P\.route\)/.test(all),
+  'append 跳过已有步骤': /existingKs: Array\.from\(existingSteps\)/.test(all),
+  'plan 跳过已完成步骤': /ovd\.skip\(k\)/.test(all) && /doneNo > 0 &&/.test(fs.readFileSync(root + '/lib/route-plan.js', 'utf8')),
+  'append 不清 steps': /if \(wrote && !isAppend\)/.test(all),
   // ★ 2026-11-15 本轮改动守卫（静态；活体 round-trip 见 post-restart-smoke.mjs）
   '里程碑全局开关': /milestoneCheck === true/.test(fs.readFileSync(root + '/lib/scheduler.js', 'utf8')),
-  'judge 标记落盘': /needs: judge/.test(src),
-  'judge 进 schema': /enum: \['judge'\]/.test(src),
-  '判断点停牌禁催补': /gap-deferred-judge/.test(src) && /judgePendingOnDisk/.test(src),
+  'judge 标记落盘': /needs: judge/.test(all),
+  'judge 进 schema': /enum: \['judge'\]/.test(all),
+  '判断点停牌禁催补': /gap-deferred-judge/.test(all) && /judgePendingOnDisk/.test(all),
   // ★ 2026-11-15 教训：文本级回归漏掉模板串反引号/重复声明这类致命语法错 ⇒ 加真语法检查
   'lib 全文件语法绿': (() => {
     try {
@@ -283,15 +283,15 @@ const codeChecks = {
       return true
     } catch { return false }
   })(),
-  '删组走宿主归档': /archiveSession\(id\)/.test(src),
+  '删组走宿主归档': /archiveSession\(id\)/.test(all),
   '恢复组动作': /action === 'restore'/.test(api),
-  '未分组清理端点': /archive-ungrouped/.test(api) && /archiveUngrouped/.test(src),
-  '未分组走持久化store': /sessionPersistence/.test(src),
-  '机械停写截断': /judge-stop-truncated/.test(src),
-  '后台看前台思维': /backSeeFrontThought/.test(src) && /backSeeFrontThought/.test(fs.readFileSync(root + '/lib/ui/settings.html', 'utf8')),
-  '配置文件热重载': /config-file-reload/.test(src),
-  'modePresets 覆写': /setPresetOverrides/.test(src) && /PRESET_OVERRIDES/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
-  '单配置文件补齐': /单配置文件/.test(src),
+  '未分组清理端点': /archive-ungrouped/.test(api) && /archiveUngrouped/.test(all),
+  '未分组走持久化store': /sessionPersistence/.test(all),
+  '机械停写截断': /judge-stop-truncated/.test(all),
+  '后台看前台思维': /backSeeFrontThought/.test(all) && /backSeeFrontThought/.test(fs.readFileSync(root + '/lib/ui/settings.html', 'utf8')),
+  '配置文件热重载': /config-file-reload/.test(all),
+  'modePresets 覆写': /setPresetOverrides/.test(all) && /PRESET_OVERRIDES/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
+  '单配置文件补齐': /单配置文件/.test(all),
   '组编号含归档台账': /\[\.\.\.list, \.\.\.loadArchived\(\)\]/.test(all),
   '恢复收敛同号归档': /arch\.filter\(\(x\) => x\.key !== key\)/.test(all),
   '意图自动切换(1.6.1)': /detect-intent/.test(all) && /const dm = detectMode\(body\)/.test(all),
@@ -300,20 +300,20 @@ const codeChecks = {
   '归档区渲染': /gmArchived/.test(page),
   '设置生效指示': /liveChips/.test(fs.readFileSync(root + '/lib/ui/settings.html', 'utf8')),
   '设置分组骨架': /initSections/.test(fs.readFileSync(root + '/lib/ui/settings.html', 'utf8')),
-  '缺口判据用盘上总数': /totalOnDisk/.test(src),
-  '任务原文落盘': /task-saved/.test(src),
-  '交接包已瘦身（newGoal 字段消失）': !/args\.known|args\.tried|args\.stuck/.test(src),
-  '交接包有 files 字段': /files: \{[\s\S]{0,120}type: 'array'/.test(src),
-  '催补判据已合并': !/haveFromNext/.test(src),
-  '断粮用 starvation 事件': /need-next-starvation/.test(src),
-  'P1 已删除（无 parHint）': !/parHint/.test(src),
-  'schema 无 group 字段': !/group: \{ type: 'string', description: '可选：并行组名/.test(src),
-  '哨兵拒绝预存文件': /sentinel-rejected/.test(src),
+  '缺口判据用盘上总数': /totalOnDisk/.test(all),
+  '任务原文落盘': /task-saved/.test(all),
+  '交接包已瘦身（newGoal 字段消失）': !/args\.known|args\.tried|args\.stuck/.test(all),
+  '交接包有 files 字段': /files: \{[\s\S]{0,120}type: 'array'/.test(all),
+  '催补判据已合并': !/haveFromNext/.test(all),
+  '断粮用 starvation 事件': /need-next-starvation/.test(all),
+  'P1 已删除（无 parHint）': !/parHint/.test(all),
+  'schema 无 group 字段': !/group: \{ type: 'string', description: '可选：并行组名/.test(all),
+  '哨兵拒绝预存文件': /sentinel-rejected/.test(all),
   '哨兵记录了拒绝原因': (() => {
     const rp = fs.readFileSync(root + '/lib/route-plan.js', 'utf8')
-    return /already-exists/.test(rp) && /already-absent/.test(rp) && /sentinel-rejected/.test(src)
+    return /already-exists/.test(rp) && /already-absent/.test(rp) && /sentinel-rejected/.test(all)
   })(),
-  'isAbsolute 已导入': /import .*isAbsolute.* from 'node:path'/.test(src),
+  'isAbsolute 已导入': /import .*isAbsolute.* from 'node:path'/.test(all),
   // ★ 2026-11-07 判型优化（基于 5 轮实测：单文件/小规格走编排纯亏）
   '判型：shouldOrchestrate 存在': /export function shouldOrchestrate/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   '判型：编排判据在 fsOpIntent 之前': (() => {
@@ -329,8 +329,8 @@ const codeChecks = {
   // ★ 2026-11-08 记录文件治理（实测：插件对这些文件名引用 0 次，纯浪费 50-60s/任务）
   'briefs 禁止前台写记录文件': /禁止要求前台写/.test(fs.readFileSync(root + '/lib/briefs.js', 'utf8')),
   'briefs 允许后台读代码': /想看进度就直接读代码/.test(fs.readFileSync(root + '/lib/briefs.js', 'utf8')),
-  '唤醒消息允许读代码': /可以（且鼓励）只读看代码/.test(src),
-  '唤醒消息禁止记录文件': /不要要求前台写记录类文件/.test(src),
+  '唤醒消息允许读代码': /可以（且鼓励）只读看代码/.test(all),
+  '唤醒消息禁止记录文件': /不要要求前台写记录类文件/.test(all),
 }
 const codeFail = Object.entries(codeChecks).filter(([, v]) => !v)
 results.push({ label: `代码修复点（${Object.keys(codeChecks).length} 项）`, ok: codeFail.length === 0, detail: codeFail.length ? '缺失: ' + codeFail.map(([k]) => k).join(', ') : '全部存在' })
