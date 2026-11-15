@@ -1,4 +1,4 @@
-import { parseSentinels, evalSentinel, evaluateSentinels } from '../lib/sentinel.js'
+import { parseSentinels, evalSentinel, evaluateSentinels } from '../lib/route-plan.js'
 import { writeFileSync, existsSync } from 'fs'
 
 let pass = 0, fail = 0

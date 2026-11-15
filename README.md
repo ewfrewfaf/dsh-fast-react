@@ -40,6 +40,11 @@
 
 ---
 
+## 🆕 v1.6.3（2026-11-15）
+
+- **结构重构**：index.js 5296 → ~2000 行装配层；抽出 runtime / groups / guards / mode-auto / api-app / tools-reg 六个内聚模块（工厂 + K/D 袋）；sentinel 并入 route-plan、messages 并入 briefs；删除侧边栏 loader 死代码与 20+ 一次性脚本；全模块中文区块注释 + index 头部区块地图。
+- 行为不变：97 单测 + 151 回归守卫 + apply 冒烟全绿。
+
 ## 🆕 v1.6.2（2026-11-15）
 
 - **热重载修复**：路由改为每进程注册一次 + 可变 app 引用转发（`globalThis.__frApp_<tag>`）。此前每 fiber 注册闭包，热重载后旧闭包仍占路由 ⇒ 改 host 代码必须重启 DSH；**1.6.2 起 `dev_reload_package` 即时生效，无需重启**（首次从 ≤1.6.1 升级仍需重启一次以清除旧路由注册）。
@@ -355,23 +360,30 @@ dsh-fast-react/
 ├── icon.svg            # 管理页图标
 ├── locale/             # 管理页标题与介绍（zh/en）
 ├── lib/
-│   ├── index.js        # 装配层 + 状态机（文件头有区块地图）
+│   ├── index.js        # 装配层 + 状态所有权（K/D 袋；文件头有区块地图，~2000 行）
+│   ├── runtime.js      # 通道(wake/steer/预算) + heartbeat/todo 镜像 + 实时投递 + 催单 + 批量拆分 + renderRoute
+│   ├── groups.js       # 会话组 + Workspace 挂载 + 权限预设 + 组 API
+│   ├── guards.js       # 看门狗 / T3 / 机械+业务哨兵 / 首帧兜底 / 上下文守护 / 档位漂移
+│   ├── mode-auto.js    # applyMode / 每任务自动判型 / 相位策略 / 自动升级
+│   ├── api-app.js      # apiApp glue（status/task intake/config/models/mode/events）
+│   ├── tools-reg.js    # 全部工具注册（全局入口 + 内部角色 + 自检）
 │   ├── api.js          # HTTP 路由
 │   ├── client.js       # 浏览器侧（侧边栏 + 控制台挂载）
-│   ├── modes.js        # 五种模式 + 自定义模式 + 判型引擎
+│   ├── modes.js        # 五种模式 + 自定义模式 + 判型引擎 v2 + 工具白名单
 │   ├── defaults.js     # 全量默认配置（单配置文件补齐源）
-│   ├── briefs.js       # 前后台简报（含判断点停写约束）
-│   ├── policies.js     # 唤醒/打断策略
-│   ├── sentinel.js     # 哨兵解析与求值（纯函数，可单测）
-│   ├── route-plan.js   # 路线校验 / 里程碑截断 / 哨兵预检 / 覆写决策（纯函数）
+│   ├── briefs.js       # 前后台简报 + 消息构造 msg（含判断点停写约束）
+│   ├── policies.js     # 破坏性命令 / 关键唤醒原因常量表
+│   ├── route-plan.js   # 路线校验 / 里程碑截断 / 哨兵预检 / 覆写决策 / 哨兵解析求值（纯函数）
 │   ├── scheduler.js    # 调度核心（批量 / 水位 / 归档守卫 / 复核判定纯函数）
 │   ├── board.js        # 黑板 IO
 │   └── ui/             # 控制台页面 + 侧边栏注入
 ├── docs/               # 技术路线 / 使用须知 / 移植指南
-└── tools/              # 自检 / 回归 / 单测 / 重启后冒烟
+└── tools/              # 自检 / 回归 / 单测 / apply 冒烟 / 重启后冒烟
 ```
 
-下沉到独立文件的逻辑都有单测：`test-sentinel` / `test-route-plan` / `test-custom` / `test-phases` / `test-degrade` / `test-handback` / `test-overwrite` / `test-milestone`（共 88 例）；`node tools/regression.mjs` 150 项守卫全绿；重启后活体验收 `node tools/post-restart-smoke.mjs --roundtrip`。
+**结构约定（1.6.3）**：跨模块可变状态一律走共享袋 `K.<name>`，跨模块函数调用一律走依赖袋 `D.<fn>`（调用时读取）；业务模块为工厂 `makeXxx(D)`，纯逻辑模块无 D 依赖可单测。找代码先看 index.js 头部区块地图。
+
+下沉到独立文件的逻辑都有单测：`test-sentinel` / `test-route-plan` / `test-custom` / `test-phases` / `test-degrade` / `test-handback` / `test-overwrite` / `test-milestone` / `test-mode-intent`（共 97 例）；`node tools/regression.mjs` 151 项守卫全绿；apply 冒烟 `node tools/apply-smoke.mjs`；重启后活体验收 `node tools/post-restart-smoke.mjs --roundtrip`。
 
 ---
 
