@@ -40,6 +40,23 @@
 
 ---
 
+## 🆕 v1.6.7（2026-11-15）
+
+- **修复 fr_route 崩溃**：`renderRoute` 把未定义的 `doneNo` 传给 `planOverwriteDecision`（正确变量 `doneNow`），导致后台每次提交路线都抛 `doneNo is not defined`、**steps 永远写不出来**，任务只能降级为后台直接终态判定。
+- 回归 4/4、overwrite 12/12、milestone 10/10、mode-intent 9/9 全绿。
+
+## 🆕 v1.6.6（2026-11-15）
+
+- **复活会话补模型改走官方 API**：仅写 `agent.options` 在 DSH 0.2.2 下对下一次请求无效，改为同时调用 `agent.model.select({provider,model})`；`/api/model` 切换同步该路径。（1.6.5 的修法不充分）
+
+## 🆕 v1.6.5（2026-11-15）
+
+- 重启后 resume 复活会话会丢模型选择 → 后台唤醒报 `has no provider/model`。复活时按角色路由补回 provider/model/reasoningEffort（`wire-model-restore` 事件可查）。
+
+## 🆕 v1.6.4（2026-11-15）
+
+- 修复 1.6.3 结构重构引入的 api-app 内部裸引用（`apiApp is not defined`）：ensureCurrentGroup / sessionInfo / deliver / fire 统一走 `D.apiApp`。
+
 ## 🆕 v1.6.3（2026-11-15）
 
 - **结构重构**：index.js 5296 → ~2000 行装配层；抽出 runtime / groups / guards / mode-auto / api-app / tools-reg 六个内聚模块（工厂 + K/D 袋）；sentinel 并入 route-plan、messages 并入 briefs；删除侧边栏 loader 死代码与 20+ 一次性脚本；全模块中文区块注释 + index 头部区块地图。
