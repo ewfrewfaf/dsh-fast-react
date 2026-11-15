@@ -296,6 +296,8 @@ const codeChecks = {
   '组编号含归档台账': /\[\.\.\.list, \.\.\.loadArchived\(\)\]/.test(all),
   '恢复收敛同号归档': /arch\.filter\(\(x\) => x\.key !== key\)/.test(all),
   '意图自动切换(1.6.1)': /detect-intent/.test(all) && /const dm = detectMode\(body\)/.test(all),
+  // ★ 1.6.7：renderRoute 曾把未定义 doneNo 传给 planOverwriteDecision ⇒ 后台 fr_route 必崩、steps 永不落盘
+  'fr_route 传参用 doneNow(1.6.7)': /planOverwriteDecision\(\{\s*\r?\n\s*doneNo:\s*doneNow/.test(all) && !/planOverwriteDecision\(\{\s*\r?\n\s*doneNo,/.test(all),
   '发送键按真实 phase': /d\.front\.phase === 'running'/.test(page),
   '批量 loading': /gmBusy\(true/.test(page),
   '归档区渲染': /gmArchived/.test(page),

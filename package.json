@@ -1,6 +1,6 @@
 {
   "name": "dsh-fast-react",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "description": "双会话编排：前台快速执行，后台逐步规划。自动判型决定自己干还是交给后台。",
   "type": "module",
   "main": "./lib/index.js",
@@ -35,7 +35,8 @@
     "tools/test-overwrite.mjs",
     "tools/test-milestone.mjs",
     "tools/test-mode-intent.mjs",
-    "tools/post-restart-smoke.mjs"
+    "tools/post-restart-smoke.mjs",
+    "tools/test-render-route.mjs"
   ],
   "keywords": [
     "dsh",

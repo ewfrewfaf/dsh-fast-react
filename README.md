@@ -40,6 +40,11 @@
 
 ---
 
+## 🆕 v1.6.8（2026-11-15）
+
+- 新增 `tools/test-render-route.mjs`：**不消耗模型额度**直接调 `renderRoute`，覆盖 plan/append/判断点停写三条路径共 10 个断言。已做反向验证——把修复回退成 `doneNo` 时该测试会立刻抛 `ReferenceError: doneNo is not defined`，证明它真能抓住 1.6.7 那个 bug。
+- 回归新增守卫「fr_route 传参用 doneNow」→ 152 项。
+
 ## 🆕 v1.6.7（2026-11-15）
 
 - **修复 fr_route 崩溃**：`renderRoute` 把未定义的 `doneNo` 传给 `planOverwriteDecision`（正确变量 `doneNow`），导致后台每次提交路线都抛 `doneNo is not defined`、**steps 永远写不出来**，任务只能降级为后台直接终态判定。
