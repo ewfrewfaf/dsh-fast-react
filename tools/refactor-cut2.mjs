@@ -199,7 +199,7 @@ function cut (modName) {
   const importLines = [...importNeeds.entries()].map(([mod, names]) => `import { ${[...names].sort().join(', ')} } from '${mod}'`)
   const header = `/**
  * ${cfg.title}
- * 从 lib/index.js 抽出的第 2 阶段模块（行为不变 refactor）。
+ * 从 lib/index.js 抽出的第 3 阶段模块（行为不变 refactor）。
  *
  * 依赖（D 依赖袋，字段调用时读取）：
  *   稳定字段（工厂顶部解构）：K cfg ctx log vlog event TAG BASE_PATH boardRoot boardDir P BB
@@ -255,8 +255,8 @@ ${cfg.map.map((m) => ' *   ' + m).join('\n')}
   const lastEnd = lineStart(cfg.move[cfg.move.length - 1].e) + lines[cfg.move[cfg.move.length - 1].e - 1].length + 1
   const insertPos = cfg.factoryAtEnd ? lastEnd : firstStart
   let replacement
-  if (isObject) replacement = `  // [重构②] ${cfg.marker} → lib/${cfg.file}\n  const ${cfg.v} = ${cfg.factory}(D)\n${cfg.object.indexReplace}\n`
-  else replacement = `  // [重构②] ${cfg.marker} → lib/${cfg.file}\n  const ${cfg.v} = ${cfg.factory}(D)\n`
+  if (isObject) replacement = `  // [重构③] ${cfg.marker} → lib/${cfg.file}\n  const ${cfg.v} = ${cfg.factory}(D)\n${cfg.object.indexReplace}\n`
+  else replacement = `  // [重构③] ${cfg.marker} → lib/${cfg.file}\n  const ${cfg.v} = ${cfg.factory}(D)\n`
   edits.push({ start: insertPos, end: insertPos, text: replacement })
   const lastImport = [...sf.statements].reverse().find((s) => ts.isImportDeclaration(s))
   edits.push({ start: lastImport.end, end: lastImport.end, text: `\nimport { ${cfg.factory} } from './${cfg.file}'` })

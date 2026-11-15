@@ -40,7 +40,7 @@
       "注：presetName/BUILD_TAG/CONFIG_KEYS 仍在 index，经 D 调用"
     ],
     "move": [
-      { "s": 2275, "e": 2951, "first": "const apiApp = {", "last": "}" }
+      { "s": 1194, "e": 1870, "first": "const apiApp = {", "last": "}" }
     ],
     "stay": [],
     "object": {
@@ -62,7 +62,7 @@
       "注：K.scopePatched/K.globalRegistered 初始化留 index 且先于工厂调用（factoryAtEnd）；B10/B11 留 index"
     ],
     "move": [
-      { "s": 3696, "e": 4359, "first": "给模型/面板用的只读自检工具", "last": "}" }
+      { "s": 2615, "e": 3278, "first": "给模型/面板用的只读自检工具", "last": "})" }
     ],
     "stay": [],
     "factoryAtEnd": true

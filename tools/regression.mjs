@@ -223,7 +223,8 @@ const codeChecks = {
   '任务重置不受 modeLocked 影响': (() => {
     // 直接找"非注释"的 `if (a === front) { resetTaskScheduler... }`，
     // 这段必须**不**位于 `if (cfg.modeAuto !== false && !cfg.modeLocked` 的块内。
-    const lines = src.split('\n').filter(l => !/^\s*(?:\/\/|\*)/.test(l))
+    // ★ 重构③：任务入口移入 api-app.js，改扫全模块（语义不变）
+    const lines = all.split('\n').filter(l => !/^\s*(?:\/\/|\*)/.test(l))
     const code = lines.join('\n')
     // 找到独占一行的 resetTaskScheduler 调用（我改成的形式）
     const m = code.match(/if\s*\(a === (?:K\.)?front\)\s*\{\s*try\s*\{[^}]*resetTaskScheduler\(\)/)

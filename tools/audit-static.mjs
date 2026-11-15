@@ -3,8 +3,8 @@ import fs from 'node:fs'
 import { libFile } from './paths.mjs'
 const p = libFile('index.js')
 let src = fs.readFileSync(p, 'utf8')
-// ★ 第一阶段重构：部分关键函数迁到 groups/guards/mode-auto，存在性检查要覆盖全模块
-for (const f of ['groups.js', 'guards.js', 'mode-auto.js']) {
+// ★ 重构①②③：部分关键函数迁到 groups/guards/mode-auto/runtime/api-app/tools-reg，存在性检查要覆盖全模块
+for (const f of ['groups.js', 'guards.js', 'mode-auto.js', 'runtime.js', 'api-app.js', 'tools-reg.js']) {
   try { src += '\n' + fs.readFileSync(libFile(f), 'utf8') } catch { /* 尚未抽出 */ }
 }
 const lines = src.split('\n')
