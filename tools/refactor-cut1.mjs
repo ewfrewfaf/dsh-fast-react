@@ -256,6 +256,10 @@ function cut (modName) {
     }
     const sym = refSymbol(checker, node)
     if (inside) {
+      // wrapped 段的包装参数（如 detectAndApplyTask 的 body/opts/a）：保持裸名，它们是新函数的参数
+      const ln0 = lineOf(sf, node.getStart(sf))
+      const w0 = (cfg.wrapped || []).find((w) => ln0 >= w.range.s && ln0 <= w.range.e)
+      if (w0 && (w0.params || []).includes(node.text)) return
       if (!sym) { if (/^[A-Z_$]/.test(node.text) || ['process', 'console', 'arguments'].includes(node.text)) unresolved.add(node.text); return }
       const decl = sym.declarations && sym.declarations[0]
       if (!decl) return

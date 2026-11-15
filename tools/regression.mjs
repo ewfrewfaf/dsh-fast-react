@@ -114,7 +114,7 @@ const codeChecks = {
     }
     return true
   })(),
-  '去重分支仍重挂': /activeMode === p\.key[\s\S]{0,400}reapplyToolPolicyIfNeeded/.test(src),
+  '去重分支仍重挂': /(?:K\.)?activeMode === p\.key[\s\S]{0,400}reapplyToolPolicyIfNeeded/.test(all),
   'resolveAgents 末尾重挂': /reapplyToolPolicyIfNeeded\(\)[\s\S]{0,200}\}/.test(src),
   // TDZ：modeDisposers 必须先于 resolveAgents 声明
   'modeDisposers 无 TDZ': (() => {
@@ -133,7 +133,7 @@ const codeChecks = {
   // ★ 多实例工具名本地化：简报与模式说明都必须走 localizeToolNames
   '有 localizeToolNames': /function localizeToolNames/.test(src),
   'brief 走本地化': /function brief[\s\S]{0,400}localizeToolNames\(text\)/.test(src),
-  'modeNotice 走本地化': /localizeToolNames\(modeNotice\(/.test(src),
+  'modeNotice 走本地化': /localizeToolNames\(modeNotice\(/.test(all),
   // ★ 2026-11-07 归档缺口守卫（实测：23 次归档 18 次有「里程碑>步骤」缺口，
   //   milestone-gap 事件 0 条 —— 催补机制从未生效，因为任务在 19s 内就归档了）
   '归档前校验里程碑缺口': /archiveBlocked|archive-blocked/.test(fs.readFileSync(root + '/lib/scheduler.js', 'utf8')),
@@ -159,18 +159,18 @@ const codeChecks = {
   '催补计数随任务重置': /if \(a === (?:K\.)?front && !isSteerInsert\) \{[\s\S]{0,300}(?:K\.)?milestoneGapCount\s*=\s*0/.test(src),
   'API 任务一律清场': /const isApiTask = !!\(opts && opts\.external\)/.test(src) && /external: true/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
   // ★ 2026-11-08 判型修复：modeBy==='user' 不该永久阻断自动判型
-  '判型不被 by=user 永久阻断': /modeBy === 'user' && isSameTask/.test(src),
+  '判型不被 by=user 永久阻断': /modeBy === 'user' && isSameTask/.test(all),
   '判型有独立文本记录': /let lastDetectText|K\.lastDetectText = ''/.test(src),
-  '判型后记录文本': /lastDetectText = thisText/.test(src),
+  '判型后记录文本': /lastDetectText = thisText/.test(all),
   // ★ 2026-11-08 判型 v2 + 分诊 + 刹车 + review 模式
   '判型v2：三档判定': /tend === 'coding'|tend = 'gray'/.test(mods) && /THRESHOLD_HIGH/.test(mods),
   '判型v2：细词表(4层)': /LEX = \{/.test(mods) && /sys:/i.test(mods) && /arch:/i.test(mods),
   '判型v2：层内封顶': /LAYER_CAP/.test(mods),
-  '判型v2：灰区分诊': /triage-woken/.test(src) && /wakeBack\('triage'/.test(src),
-  '判型v2：显式模式参数': /mode-explicit/.test(src) && /opts\.mode_strict/.test(src),
+  '判型v2：灰区分诊': /triage-woken/.test(all) && /wakeBack\('triage'/.test(all),
+  '判型v2：显式模式参数': /mode-explicit/.test(all) && /opts\.mode_strict/.test(all),
   '判型v2：pin 锁定': /modePinned/.test(src) && /mode-pinned/.test(src),
   '判型v2：API mode 参数': /extraOpts\.mode/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
-  '兜底：25 工具自动升级': /auto-upgrade/.test(src) && /stepsThisTask > 25/.test(src),
+  '兜底：25 工具自动升级': /auto-upgrade/.test(all) && /stepsThisTask > 25/.test(all),
   'review 模式存在': /key: 'review'/.test(mods),
   'review 判型意图': /REVIEW_INTENT/.test(mods),
   '刹车 API': /\/api\/brake/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
@@ -188,7 +188,7 @@ const codeChecks = {
   // ★ 2026-11-08 阈值收紧+后移：灰区从 (-2,8) 改为 (1,6)
   '灰区收紧后移': /GRAY_HIGH = 6/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')) && /GRAY_LOW = 3/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   '已知N个问题强负信号': /已知N个问题/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
-  'quick 可升级(coding)': /escalate-auto-upgrade/.test(src),
+  'quick 可升级(coding)': /escalate-auto-upgrade/.test(all),
   // ★ 2026-11-08 模式判决微调
   '对比归 consult': /优缺点\|对比\|方案对比/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   // ★ 2026-11-08 工具作用域：fr_* 只对快速反应会话可见
@@ -208,7 +208,7 @@ const codeChecks = {
   'coding 覆盖通用分诊': /覆盖上式/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   'coding 执行层督促': /must-escalate-nudge/.test(src),
   'esc 时间戳记录': /lastEscalateAt = Date\.now\(\)/.test(src),
-  'esc 时间戳重置': /(?:K\.)?autoUpgradedThisTask = false; (?:K\.)?lastEscalateAt = 0/.test(src),
+  'esc 时间戳重置': /(?:K\.)?autoUpgradedThisTask = false; (?:K\.)?lastEscalateAt = 0/.test(all),
   '分诊穿透 quick 守卫': /BYPASS = new Set\('manual', 'triage', 'auto-upgrade'\)/i.test(src) || /'triage', 'auto-upgrade'/.test(src),
   // ★ 2026-11-07 冷却策略重写（45s 固定冷却把后台 87% 时间耗在空等）
   '缺口驱动冷却函数存在': /function prefetchCooldownFor/.test(src),
@@ -294,7 +294,7 @@ const codeChecks = {
   '单配置文件补齐': /单配置文件/.test(src),
   '组编号含归档台账': /\[\.\.\.list, \.\.\.loadArchived\(\)\]/.test(all),
   '恢复收敛同号归档': /arch\.filter\(\(x\) => x\.key !== key\)/.test(all),
-  '意图自动切换(1.6.1)': /detect-intent/.test(src) && /const dm = detectMode\(body\)/.test(src),
+  '意图自动切换(1.6.1)': /detect-intent/.test(all) && /const dm = detectMode\(body\)/.test(all),
   '发送键按真实 phase': /d\.front\.phase === 'running'/.test(page),
   '批量 loading': /gmBusy\(true/.test(page),
   '归档区渲染': /gmArchived/.test(page),

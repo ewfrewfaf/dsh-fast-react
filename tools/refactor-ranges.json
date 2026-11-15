@@ -1,4 +1,51 @@
 {
+  "mode-auto": {
+    "file": "mode-auto.js",
+    "factory": "makeModeAuto",
+    "v": "MA",
+    "title": "mode-auto.js —— 任务模式生效 / L2 策略 / auto 判型与分诊 / 自动升级",
+    "marker": "模式生效 applyMode / L2 策略 applyStrategy / auto 决议 resolveAutoPhases / touchBeat / nextStrategies",
+    "apiMarker": "（无）",
+    "map": [
+      "applyMode：写 mode.md + 事件 + 工具白名单 + 注入说明（applyToolPolicy/reapplyToolPolicyIfNeeded 仍在 index，经 D 调用）",
+      "applyStrategy：L2 相位策略旋钮（K.activeStrategy 初始化留在 index）",
+      "resolveAutoPhases：auto+phases 的 L1 决议（确信quick / 编排+侦察门）",
+      "touchBeat / nextStrategies：心跳基线 / 阶段策略序列（供 scheduler）",
+      "detectAndApplyTask(body, opts, a)：原 apiApp.deliver 内的每任务判型块（三档+灰区分诊+pin）",
+      "upgradeByToolCount()：原 tools/post-execute 内「工具数兜底」片段（quick>25 工具升 coding）",
+      "upgradeByFrontRequest()：原 fr_escalate 内「前台请求升级」片段（无后台模式自动升 coding）",
+      "注：effortOverride/setEffortFor 与 _effortForRaw 耦合，留在 index；readModeFile/currentMode/modeNow 留在 index 经 D 调用"
+    ],
+    "move": [
+      { "s": 1080, "e": 1133, "first": "生效一个模式", "last": "}" },
+      { "s": 1135, "e": 1135, "first": "L2 策略切换", "last": "L2 策略切换" },
+      { "s": 1137, "e": 1160, "first": "function applyStrategy", "last": "}" },
+      { "s": 1163, "e": 1168, "first": "function touchBeat", "last": "}" }
+    ],
+    "stay": [],
+    "api": [],
+    "wrapped": [
+      {
+        "name": "detectAndApplyTask",
+        "sig": "function detectAndApplyTask (body, opts, a)",
+        "params": ["body", "opts", "a"],
+        "range": { "s": 2694, "e": 2779, "first": "模式自动判型（Phase 1）", "last": "}" },
+        "call": "      // ── 模式自动判型（Phase 1）→ lib/mode-auto.js\n      MA.detectAndApplyTask(body, opts, a)"
+      },
+      {
+        "name": "upgradeByToolCount",
+        "sig": "function upgradeByToolCount ()",
+        "range": { "s": 3629, "e": 3643, "first": "兜底：quick 模式跑太多工具", "last": "兜底失败不影响主流程" },
+        "call": "          // ★★ 2026-11-08 兜底：quick 模式跑太多工具 ⇒ 自动升级到编排 → lib/mode-auto.js\n          MA.upgradeByToolCount()"
+      },
+      {
+        "name": "upgradeByFrontRequest",
+        "sig": "function upgradeByFrontRequest ()",
+        "range": { "s": 4474, "e": 4494, "first": "允许 quick 升级", "last": "}" },
+        "call": "      // ★★★ 2026-11-08 允许 quick 升级（前台主动上交 ⇒ 自动升 coding）→ lib/mode-auto.js\n      MA.upgradeByFrontRequest()"
+      }
+    ]
+  },
   "guards": {
     "file": "guards.js",
     "factory": "makeGuards",
