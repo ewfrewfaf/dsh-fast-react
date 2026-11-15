@@ -1,0 +1,21 @@
+# npm 发布时排除过程文档（GitHub 仓库里仍然保留）
+docs/废案-*.md
+docs/测试方案.md
+docs/测试任务清单.md
+docs/BUG-*.md
+tools/verify-*.mjs
+tools/test-live.mjs
+tools/diag*.mjs
+tools/measure.mjs
+tools/runab.mjs
+tools/mksandbox.mjs
+tools/trace-*.mjs
+tools/audit-runtime.mjs
+tools/audit-wiring.mjs
+tools/bench_single.mjs
+tools/final-check.mjs
+tools/repair-state.mjs
+tools/heal.mjs
+tools/preflight.mjs
+tools/sync-desktop*.mjs
+tools/make-github-pack.mjs

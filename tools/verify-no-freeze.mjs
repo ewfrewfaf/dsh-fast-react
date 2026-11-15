@@ -1,8 +1,9 @@
+import { boardDir } from './paths.mjs'
 // 验证：闲聊天不再触发哨兵冻结
 const port = process.argv[2] || '8595'
 const base = `http://127.0.0.1:${port}`
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p, opt) => {
   const r = await fetch(base + p, opt)

@@ -1,8 +1,9 @@
+import { boardDir } from './paths.mjs'
 // 定向验证：事件驱动预规划（投递后即时唤醒后台）
 const port = process.argv[2] || '4099'
 const base = `http://127.0.0.1:${port}`
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p, opt) => {
   try { const r = await fetch(base + p, opt); return await r.json() } catch (e) { return { error: String(e.message) } }

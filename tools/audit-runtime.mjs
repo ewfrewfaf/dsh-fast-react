@@ -1,8 +1,9 @@
 // 运行时审计：一次性采集所有关键状态，用于定位真实 bug
 import fs from 'node:fs'
+import { boardDir, pluginLog } from './paths.mjs'
 const port = process.argv[2] || '4099'
 const base = `http://127.0.0.1:${port}`
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p, opt) => {
   try { const r = await fetch(base + p, opt); const t = await r.text(); return JSON.parse(t) } catch (e) { return { error: String(e.message) } }
@@ -55,7 +56,7 @@ const failLines = hb.filter(l => /FAIL/.test(l))
 out.heartbeat = { total: hb.length, fails: failLines.length, lastFail: failLines.slice(-1)[0] || '' }
 
 // 7) 日志中的错误
-const log = rd('C:/Users/admin/.dsh/super-injector/fast-react.log').trim().split('\n')
+const log = rd(pluginLog()).trim().split('\n')
 const errs = log.filter(l => /fail|error|失败|异常|undefined|cannot|NaN/i.test(l) && !/0 fail/i.test(l))
 out.logErrors = errs.slice(-10).map(l => l.slice(0, 170))
 

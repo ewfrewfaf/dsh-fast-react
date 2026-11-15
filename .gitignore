@@ -6,3 +6,7 @@ node_modules/
 Thumbs.db
 .idea/
 .vscode/
+
+# 编辑备份（会话中随手打的快照，不应进仓库）
+*.bak-*
+*.bak

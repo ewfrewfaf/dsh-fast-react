@@ -1,8 +1,9 @@
+import { boardDir } from './paths.mjs'
 // 查为什么 steps 已存在但 delivered=0
 const port = process.argv[2] || '4099'
 const base = `http://127.0.0.1:${port}`
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p) => { try { const r = await fetch(base + p); return await r.json() } catch (e) { return { error: String(e.message) } } }
 

@@ -1,6 +1,7 @@
 // 静态审计：找出潜在 bug（未定义变量、重复定义、死代码、可疑模式）
 import fs from 'node:fs'
-const p = 'C:/Users/admin/.dsh/plugins/dsh-fast-react/lib/index.js'
+import { libFile } from './paths.mjs'
+const p = libFile('index.js')
 const src = fs.readFileSync(p, 'utf8')
 const lines = src.split('\n')
 

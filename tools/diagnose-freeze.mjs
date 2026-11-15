@@ -1,8 +1,9 @@
 // 诊断：为什么只发"你好"也会触发 H4 冻结
 import fs from 'node:fs'
+import { boardDir, pluginLog } from './paths.mjs'
 const port = process.argv[2] || '8595'
 const base = `http://127.0.0.1:${port}`
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p) => {
   try { const r = await fetch(base + p); return await r.json() } catch (e) { return { error: String(e.message) } }
@@ -36,6 +37,6 @@ console.log('\n=== metric 文件（失败计数持久化）===')
 console.log(rd(board + '/metrics.json').slice(0, 600))
 
 console.log('\n=== 插件日志中哨兵/冻结上下文 ===')
-const log = rd('C:/Users/admin/.dsh/super-injector/fast-react.log').trim().split('\n')
+const log = rd(pluginLog()).trim().split('\n')
 const hits = log.map((l, i) => /哨兵|冻结|失败|fail|failStreak/i.test(l) ? i : -1).filter(i => i >= 0).slice(-10)
 hits.forEach(i => console.log(' ', log[i].slice(0, 190)))

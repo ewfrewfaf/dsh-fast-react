@@ -1,19 +1,40 @@
 {
   "name": "dsh-fast-react",
-  "version": "1.4.1",
-  "description": "快速反应：前台低档快答快做 + 后台高档逐步规划的双会话编排插件，含独立 Web 控制台与便捷 API",
+  "version": "1.6.0",
+  "description": "双会话编排：前台快速执行，后台逐步规划。自动判型决定自己干还是交给后台。",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
-    ".": "./lib/index.js"
+    ".": "./lib/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json",
+    "./client": "./lib/client.js"
   },
   "files": [
     "lib",
-    "docs",
-    "tools",
+    "icon.svg",
+    "locale",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/使用须知.md",
+    "docs/技术路线.md",
+    "docs/移植指南.md",
+    "docs/升级验证.md",
+    "tools/paths.mjs",
+    "tools/selfcheck.mjs",
+    "tools/regression.mjs",
+    "tools/audit-static.mjs",
+    "tools/audit-ui-api.mjs",
+    "tools/test-sentinel.mjs",
+    "tools/test-route-plan.mjs",
+    "tools/test-custom.mjs",
+    "tools/test-phases.mjs",
+    "tools/test-degrade.mjs",
+    "tools/test-handback.mjs",
+    "tools/test-overwrite.mjs",
+    "tools/test-milestone.mjs",
+    "tools/post-restart-smoke.mjs"
   ],
   "keywords": [
     "dsh",
@@ -42,11 +63,20 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
-    "console": "/fr"
+    "console": "/fr",
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ]
+    },
+    "manifestVersion": 1
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Ewfrewfaf/dsh-fast-react"
   },
-  "homepage": "https://github.com/Ewfrewfaf/dsh-fast-react#readme"
+  "homepage": "https://github.com/Ewfrewfaf/dsh-fast-react#readme",
+  "icon": "./icon.svg"
 }

@@ -1,8 +1,9 @@
+import { boardDir, pluginLog } from './paths.mjs'
 // 查：接线被非 fr 会话抢占 + 子智能体活动
 const port = process.argv[2] || '4099'
 const base = `http://127.0.0.1:${port}`
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p) => { try { const r = await fetch(base + p); return await r.json() } catch (e) { return { error: String(e.message) } } }
 
@@ -30,7 +31,7 @@ console.log('事件中 subagent 相关:', sub.length)
 sub.slice(-5).forEach(e => console.log(' ', e.kind, JSON.stringify(e.detail || {}).slice(0, 100)))
 
 console.log('\n=== 日志中的接线变化 ===')
-const log = rd('C:/Users/admin/.dsh/super-injector/fast-react.log').trim().split('\n')
+const log = rd(pluginLog()).trim().split('\n')
 const wireLogs = log.filter(l => /接线|焊死|自愈|front=|back=/i.test(l))
 wireLogs.slice(-12).forEach(l => console.log(' ', l.slice(0, 175)))
 

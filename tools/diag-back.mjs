@@ -1,8 +1,9 @@
 // 诊断：为什么后台没被拉起
 import fs from 'node:fs'
+import { boardDir, pluginLog } from './paths.mjs'
 const port = process.argv[2] || '8595'
 const base = `http://127.0.0.1:${port}`
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p) => { try { const r = await fetch(base + p); return await r.json() } catch (e) { return { error: String(e.message) } } }
 
@@ -41,5 +42,5 @@ console.log('escalate 次数:', esc.length)
 esc.slice(-3).forEach(e => console.log(' ', String(e.at).slice(11, 19), JSON.stringify(e.detail || {}).slice(0, 150)))
 
 console.log('\n=== 插件日志尾部 20 ===')
-const log = rd('C:/Users/admin/.dsh/super-injector/fast-react.log').trim().split('\n').slice(-20)
+const log = rd(pluginLog()).trim().split('\n').slice(-20)
 log.forEach(l => console.log(' ', l.slice(0, 180)))

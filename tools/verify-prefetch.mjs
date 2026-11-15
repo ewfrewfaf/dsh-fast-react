@@ -1,8 +1,9 @@
+import { boardDir } from './paths.mjs'
 // 验证流水线预规划：前台跑第 N 步时，后台应被提前唤醒写下一批
 const port = process.argv[2] || '8595'
 const base = `http://127.0.0.1:${port}`
 const fs = await import('node:fs')
-const board = 'C:/Users/admin/Desktop/FastReact/.board'
+const board = boardDir()
 const rd = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } }
 const j = async (p, opt) => {
   const r = await fetch(base + p, opt)
