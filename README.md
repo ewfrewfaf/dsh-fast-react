@@ -40,6 +40,23 @@
 
 ---
 
+## 🆕 v1.6.0（2026-11-15）
+
+| 变更 | 说明 |
+|---|---|
+| **判断点停写** | 步骤可标 `needs: judge`：投出该步后停牌等后台判断；**机械截断**其后依赖步（不靠模型自觉），停牌期间里程碑催补自动暂停，判断解除后恢复 |
+| **里程碑复核全局开关** | `milestoneCheck` + `milestoneEvery`：打开后每 N 步强制后台轻量复核前台是否偏航（覆盖各模式 `reviewEvery`；10 分钟节流、每任务 ≤3 次） |
+| **后台看前台思维链** | `backSeeFrontThought`：复核/判断唤醒附前台 reasoning 尾部（≤1500 字），助判偏航；默认关 |
+| **单配置文件** | `.board/config.json` 启动时补齐全部默认键 = 全量可编辑文件；`modePresets` 可覆写内置模式旋钮；**保存 600ms 后热重载**（AI 可直接改文件） |
+| **删组 = 归档可恢复** | 删除会话组改为宿主级 `archiveSession`（侧栏不再留未分组）；归档台账 `groups.archived.json`；弹层「已归档」区单条/全部恢复；组编号计入归档台账防碰撞 |
+| **历史未分组清理** | `POST /fr/api/archive-ungrouped` + 弹层「清理未分组」按钮：FR 产生、不在任何组/工作区的历史会话一键归档 |
+| **批量操作 loading** | 批量删除/恢复显示玻璃进度条 + spinner + x/y 进度，期间禁用其它操作防叠单 |
+| **设置页整改** | 删调试残留开关；按语义重分组；新增「生效指示」条（todo 镜像/apply_patch 预设/拉取/里程碑/判断停牌/上下文压缩 实时状态）；9 个新开关/数值入 UI |
+| **发送键修复** | 空闲 = 箭头、运行中 = 停止方块（旧版因 phase 对象误比恒显方块） |
+| **可单测化** | 覆写决策 `planOverwriteDecision`、复核判定 `milestoneReviewDue` 抽纯函数；新增 6 套单测，回归守卫 150 项全绿 |
+
+---
+
 ## 🎯 判型引擎
 
 **不再「什么都走编排」。** v1.4 的痛点是：1 个文件的小改动也要叫醒后台规划，白亏 30-60%。
@@ -89,6 +106,8 @@
 
 **为什么 quick 关掉思考？** 小改动不需要推理。深度思考放在真正需要的地方：`coding` 由后台（`max` 档）承担，`review` 前台自己用 `high`。
 
+**自定义模式**：设置页「＋ 自定义」可建模式（后台/写步骤/首句回执/预取/查资料/审 diff/步长/复核间隔/扇形数/前台强度全开放）；`config.json` 的 `modePresets` 还能覆写内置模式旋钮，保存即热重载。
+
 ---
 
 ## 📊 实测数据
@@ -132,7 +151,7 @@ L1-L5 代码任务，每题跑机器验收（`check.mjs`），DeepSeek V4.1 Flas
 dsh plugin --profile <profile> add dsh-fast-react
 
 # 或离线 tgz（从 Release 下载）
-dsh plugin --profile <profile> add ./dsh-fast-react-1.5.0.tgz
+dsh plugin --profile <profile> add ./dsh-fast-react-1.6.0.tgz
 ```
 
 **装完必须重启一次 DSH** —— `package.json` 里的 icon / locale / client 只在启动时扫描，不重启侧边栏不出现、图标不显示。
@@ -174,7 +193,8 @@ profile 的 `package.json` 里加：
 | 控件 | 作用 |
 |---|---|
 | 启动 / 停止 | 启用/暂停整套编排（T3 拦截、实时投递、巡检）。**不销毁会话** |
-| ⊞ 会话组 | `FR-01…` 新建 / 收编当前 / 删除 / 切换 / 自愈；每组独立权限 |
+| ⊞ 会话组 | `FR-01…` 新建 / 收编当前 / 删除(=归档) / 切换 / 自愈 / 清理未分组；每组独立权限；已归档区可恢复 |
+| 生效指示 | 设置页实时显示 todo 镜像 / apply_patch 预设 / 拉取 / 里程碑复核 / 判断停牌 / 上下文压缩 的开关与实际生效状态 |
 | ⚙ 技术面板 | 进度、步骤、路线检查、效率指标、唤醒分布、事件流 |
 | 模型 ▾ | 切换前后台模型 |
 | 发送即打断 | 见上 |
@@ -187,6 +207,7 @@ profile 的 `package.json` 里加：
 - 每组 = 前台 `FR-0x·F` + 后台 `FR-0x·B`，全部 attach + pin 到「快速反应」工作区 ⇒ **DSH 侧边栏可直接打开原生会话页**
 - **收编当前**：把已在跑的前后台登记成组，不新建会话
 - **自愈**：编号重排、丢失会话重建、工作区重挂、权限重应用
+- **删除 = 归档**：v1.6 起删组不再留下未分组会话——宿主级归档、台账留痕，弹层「已归档」区可单条/全部恢复；「清理未分组」一键归档历史遗留
 - **权限**：每组一个下拉（`read-only` / `workspace-write` / `danger-full-access` / `auto`），
   立即写入沙箱模式 + 审批策略（复用 DSH `permissionPresets`）——**不用再盯着会话点“允许”**
 - 权限被拒时前台会回一行 `【上报·权限】缺 …` 并停下，不会无声重试
@@ -204,7 +225,12 @@ Base：`http://127.0.0.1:<端口>`，`Content-Type: application/json`
 | POST | `/fr/api/task` | 发任务 `{text, mode?, mode_strict?, group?, role?, interrupt?}` |
 | POST | `/fr/api/brake` | 刹车 `{scope, reason?}` |
 | POST | `/fr/api/start` `/stop` `/rebuild` | 启动 / 停止 / 重建会话 |
-| GET/POST | `/fr/api/groups` | 会话组：create/switch/policy/delete |
+| GET/POST | `/fr/api/groups` | 会话组：create/switch/policy/delete/**restore** |
+| POST | `/fr/api/archive-ungrouped` | 历史未分组 FR 会话一键归档（v1.6） |
+| GET/POST | `/fr/api/config` | 读/写运行配置（白名单键，v1.6 起含 modePresets/milestoneCheck 等） |
+| GET/POST | `/fr/api/mode` | 读/切协作模式 |
+| GET | `/fr/api/models` · POST `/fr/api/model` | 模型清单 / 切换前后台模型 |
+| POST | `/fr/api/confirm` | T3 破坏性操作批准/拒绝 |
 | GET | `/fr/api/events?since=&limit=` | 事件增量 |
 
 ```bash
@@ -256,6 +282,7 @@ fr_task({ text: "修一下这个 bug", group: "FR-123", mode: "coding" })
 <工作目录>/.board/
 ├── config.json      # 运行配置
 ├── groups.json      # 会话组（FR-0x → sessionId + preset）
+├── groups.archived.json  # 归档组台账（v1.6，删组留痕可恢复）
 ├── state.md         # planVersion / status / done
 ├── route.md         # 后台路线（含「## 里程碑」「## 哨兵条件」）
 ├── steps/S1.md…     # 步骤（前台自取）
@@ -294,6 +321,8 @@ fr_task({ text: "修一下这个 bug", group: "FR-123", mode: "coding" })
 | **管理页不显示图标/介绍？** | 介绍看 `locale/zh.json` 的 `meta.description`；图标看 `package.json` 的 `icon`（**必须相对路径**，data URL 会报错） |
 | **和记忆/审计插件冲突吗？** | 不冲突。互不依赖，也不改 DSH 的 DOM 与全局配置 |
 | **面板会盖住右下角挂件吗？** | 会。面板按原生会话区矩形整体覆盖，这是当前取舍 |
+| **改配置要重启吗？** | v1.6 起不用：`.board/config.json` 保存 600ms 后热重载（含 modePresets/自定义模式）；改 `lib/index.js` 才需重载/重启 |
+| **删掉的会话组能找回吗？** | 能。v1.6 删组=宿主级归档，弹层「已归档」区单条/全部恢复；历史未分组用「清理未分组」归档 |
 
 ---
 
@@ -308,17 +337,20 @@ dsh-fast-react/
 │   ├── index.js        # 装配层 + 状态机（文件头有区块地图）
 │   ├── api.js          # HTTP 路由
 │   ├── client.js       # 浏览器侧（侧边栏 + 控制台挂载）
-│   ├── modes.js        # 五种模式 + 判型引擎
+│   ├── modes.js        # 五种模式 + 自定义模式 + 判型引擎
+│   ├── defaults.js     # 全量默认配置（单配置文件补齐源）
+│   ├── briefs.js       # 前后台简报（含判断点停写约束）
+│   ├── policies.js     # 唤醒/打断策略
 │   ├── sentinel.js     # 哨兵解析与求值（纯函数，可单测）
-│   ├── route-plan.js   # 路线校验 / 里程碑截断 / 哨兵预检
-│   ├── scheduler.js    # 调度核心（批量 / 水位 / 归档守卫）
+│   ├── route-plan.js   # 路线校验 / 里程碑截断 / 哨兵预检 / 覆写决策（纯函数）
+│   ├── scheduler.js    # 调度核心（批量 / 水位 / 归档守卫 / 复核判定纯函数）
 │   ├── board.js        # 黑板 IO
 │   └── ui/             # 控制台页面 + 侧边栏注入
 ├── docs/               # 技术路线 / 使用须知 / 移植指南
-└── tools/              # 自检 / 回归 / 单测
+└── tools/              # 自检 / 回归 / 单测 / 重启后冒烟
 ```
 
-下沉到独立文件的逻辑都有单测：`node tools/test-sentinel.mjs`、`node tools/test-route-plan.mjs`（共 33 例）。
+下沉到独立文件的逻辑都有单测：`test-sentinel` / `test-route-plan` / `test-custom` / `test-phases` / `test-degrade` / `test-handback` / `test-overwrite` / `test-milestone`（共 88 例）；`node tools/regression.mjs` 150 项守卫全绿；重启后活体验收 `node tools/post-restart-smoke.mjs --roundtrip`。
 
 ---
 
