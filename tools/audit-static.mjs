@@ -2,7 +2,11 @@
 import fs from 'node:fs'
 import { libFile } from './paths.mjs'
 const p = libFile('index.js')
-const src = fs.readFileSync(p, 'utf8')
+let src = fs.readFileSync(p, 'utf8')
+// ★ 第一阶段重构：部分关键函数迁到 groups/guards/mode-auto，存在性检查要覆盖全模块
+for (const f of ['groups.js', 'guards.js', 'mode-auto.js']) {
+  try { src += '\n' + fs.readFileSync(libFile(f), 'utf8') } catch { /* 尚未抽出 */ }
+}
 const lines = src.split('\n')
 
 const issues = []

@@ -70,7 +70,8 @@ try {
 // 4) 代码关键修复点存在性
 const src = fs.readFileSync(root + '/lib/index.js', 'utf8')
 // ★ #8 拆分后：部分关键逻辑迁到 lib/*.js，静态审计要覆盖全模块（否则误报"缺失"）
-const mods = ['board.js', 'state.js', 'delivery.js', 'scheduler.js', 'sentinels.js', 'kernel.js', 'modes.js', 'defaults.js']
+const mods = ['board.js', 'state.js', 'delivery.js', 'scheduler.js', 'sentinels.js', 'kernel.js', 'modes.js', 'defaults.js',
+  'groups.js', 'guards.js', 'mode-auto.js']
   .map((f) => { try { return fs.readFileSync(root + '/lib/' + f, 'utf8') } catch { return '' } })
   .join('\n')
 const all = src + '\n' + mods
@@ -101,11 +102,15 @@ const codeChecks = {
   // ★ 强制：**每一个** svcAgentLoop.create 后 10 行内必须有挂载动作，
   //   防止将来新增创建点忘了挂（漏一个就是一个 68 工具的窗口）
   '所有创建点均挂工具面': (() => {
-    const lines = src.split(/\r?\n/)
-    for (let i = 0; i < lines.length; i++) {
-      if (!/svcAgentLoop\.create/.test(lines[i])) continue
-      const win = lines.slice(i, i + 10).join(' ')
-      if (!/attachToolPolicyFor|__frWorkerDispose|tools\.restrict/.test(win)) return false
+    // ★ 重构①：创建点可能分布在 index 与抽出模块，逐文件扫描（语义不变）
+    const files = [src, ...['groups.js', 'guards.js', 'mode-auto.js'].map((f) => { try { return fs.readFileSync(root + '/lib/' + f, 'utf8') } catch { return '' } })]
+    for (const text of files) {
+      const lines = text.split(/\r?\n/)
+      for (let i = 0; i < lines.length; i++) {
+        if (!/svcAgentLoop\.create/.test(lines[i])) continue
+        const win = lines.slice(i, i + 10).join(' ')
+        if (!/attachToolPolicyFor|__frWorkerDispose|tools\.restrict/.test(win)) return false
+      }
     }
     return true
   })(),
@@ -151,11 +156,11 @@ const codeChecks = {
   })(),
   '新任务清理旧 deliver': /deliver-cleared/.test(src),
   '归档时清理 deliver': /deliver-cleared/.test(fs.readFileSync(root + '/lib/scheduler.js', 'utf8')),
-  '催补计数随任务重置': /if \(a === front && !isSteerInsert\) \{[\s\S]{0,300}milestoneGapCount\s*=\s*0/.test(src),
+  '催补计数随任务重置': /if \(a === (?:K\.)?front && !isSteerInsert\) \{[\s\S]{0,300}(?:K\.)?milestoneGapCount\s*=\s*0/.test(src),
   'API 任务一律清场': /const isApiTask = !!\(opts && opts\.external\)/.test(src) && /external: true/.test(fs.readFileSync(root + '/lib/api.js', 'utf8')),
   // ★ 2026-11-08 判型修复：modeBy==='user' 不该永久阻断自动判型
   '判型不被 by=user 永久阻断': /modeBy === 'user' && isSameTask/.test(src),
-  '判型有独立文本记录': /let lastDetectText/.test(src),
+  '判型有独立文本记录': /let lastDetectText|K\.lastDetectText = ''/.test(src),
   '判型后记录文本': /lastDetectText = thisText/.test(src),
   // ★ 2026-11-08 判型 v2 + 分诊 + 刹车 + review 模式
   '判型v2：三档判定': /tend === 'coding'|tend = 'gray'/.test(mods) && /THRESHOLD_HIGH/.test(mods),
@@ -203,7 +208,7 @@ const codeChecks = {
   'coding 覆盖通用分诊': /覆盖上式/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   'coding 执行层督促': /must-escalate-nudge/.test(src),
   'esc 时间戳记录': /lastEscalateAt = Date\.now\(\)/.test(src),
-  'esc 时间戳重置': /autoUpgradedThisTask = false; lastEscalateAt = 0/.test(src),
+  'esc 时间戳重置': /(?:K\.)?autoUpgradedThisTask = false; (?:K\.)?lastEscalateAt = 0/.test(src),
   '分诊穿透 quick 守卫': /BYPASS = new Set\('manual', 'triage', 'auto-upgrade'\)/i.test(src) || /'triage', 'auto-upgrade'/.test(src),
   // ★ 2026-11-07 冷却策略重写（45s 固定冷却把后台 87% 时间耗在空等）
   '缺口驱动冷却函数存在': /function prefetchCooldownFor/.test(src),
@@ -221,7 +226,7 @@ const codeChecks = {
     const lines = src.split('\n').filter(l => !/^\s*(?:\/\/|\*)/.test(l))
     const code = lines.join('\n')
     // 找到独占一行的 resetTaskScheduler 调用（我改成的形式）
-    const m = code.match(/if\s*\(a === front\)\s*\{\s*try\s*\{[^}]*resetTaskScheduler\(\)/)
+    const m = code.match(/if\s*\(a === (?:K\.)?front\)\s*\{\s*try\s*\{[^}]*resetTaskScheduler\(\)/)
     return !!m
   })(),
   // ② 里程碑单调性（防"永远补不完"）
@@ -287,8 +292,8 @@ const codeChecks = {
   '配置文件热重载': /config-file-reload/.test(src),
   'modePresets 覆写': /setPresetOverrides/.test(src) && /PRESET_OVERRIDES/.test(fs.readFileSync(root + '/lib/modes.js', 'utf8')),
   '单配置文件补齐': /单配置文件/.test(src),
-  '组编号含归档台账': /\[\.\.\.list, \.\.\.loadArchived\(\)\]/.test(src),
-  '恢复收敛同号归档': /arch\.filter\(\(x\) => x\.key !== key\)/.test(src),
+  '组编号含归档台账': /\[\.\.\.list, \.\.\.loadArchived\(\)\]/.test(all),
+  '恢复收敛同号归档': /arch\.filter\(\(x\) => x\.key !== key\)/.test(all),
   '意图自动切换(1.6.1)': /detect-intent/.test(src) && /const dm = detectMode\(body\)/.test(src),
   '发送键按真实 phase': /d\.front\.phase === 'running'/.test(page),
   '批量 loading': /gmBusy\(true/.test(page),

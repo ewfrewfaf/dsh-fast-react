@@ -1,0 +1,65 @@
+{
+  "guards": {
+    "file": "guards.js",
+    "factory": "makeGuards",
+    "v": "GD",
+    "title": "guards.js —— 机械守卫：看门狗 / T3 拦截 / 哨兵冻结 / 首帧兜底 / 上下文守护 / 档位漂移 / 业务哨兵",
+    "marker": "僵死看门狗 / T3 拦截 / 机械哨兵 / 首帧兜底（函数体）",
+    "apiMarker": "T3 审批方法（listPendingConfirms/approveConfirm/rejectConfirm）",
+    "map": [
+      "看门狗：lastUserText / lastAssistantText / checkStall（stallTimer 注册留在 index 原位）",
+      "T3：isDestructive / hasConfirm（K.t3Blocked 初始化留在 index）",
+      "机械哨兵：sentinelState（模块私有）/ freezeFront / runSentinels",
+      "首帧兜底：checkFirstFrame（K.firstFrameNudgedAt 初始化留在 index）",
+      "上下文守护：checkContextBudget（svcMeter/svcCompaction inject 与 K.lastCompactAt 留在 index）",
+      "B10 档位漂移：setEffort（K.curEffort 初始化留在 index）",
+      "B12 业务哨兵：readSentinels / evalSentinel / runBusinessSentinels（B11 度量落盘整段留在 index）",
+      "api：listPendingConfirms / approveConfirm / rejectConfirm"
+    ],
+    "move": [
+      { "s": 1335, "e": 1400, "first": "取该会话最后一条", "last": "}" },
+      { "s": 1409, "e": 1416, "first": "function isDestructive", "last": "hasConfirm" },
+      { "s": 1417, "e": 1418, "first": "B7 机械哨兵", "last": "sentinelState" },
+      { "s": 1425, "e": 1511, "first": "哨兵命中 ⇒ 冻结前台", "last": "}" },
+      { "s": 1527, "e": 1561, "first": "P1 慢模型兜底", "last": "}" },
+      { "s": 1705, "e": 1732, "first": "async function checkContextBudget", "last": "}" },
+      { "s": 4834, "e": 4849, "first": "async function setEffort", "last": "}" },
+      { "s": 4876, "e": 4886, "first": "B12 业务哨兵", "last": "evalSentinel" },
+      { "s": 4889, "e": 4941, "first": "function runBusinessSentinels", "last": "}" }
+    ],
+    "stay": [],
+    "api": [
+      { "s": 2614, "e": 2665, "first": "T3 待批准列表", "last": "}," }
+    ]
+  },
+  "groups": {
+    "file": "groups.js",
+    "factory": "makeGroups",
+    "v": "GR",
+    "title": "groups.js —— 会话组注册表 / Workspace 挂载 / 权限预设",
+    "marker": "Workspace 挂载 / 会话组注册表 / 权限预设",
+    "apiMarker": "会话组管理方法（listGroups/setGroupPolicy/createGroup/deleteGroup/restoreGroup/switchGroup/repairGroups）",
+    "map": [
+      "Workspace 挂载：wsRegistry / ensureWorkspace / linkSession / pruneDeadWorkspaceRefs / detachSession / linkFrontWorkspace",
+      "组注册表：GROUPS_FILE / GROUPS_ARCHIVED / loadGroups / saveGroups / loadArchived / saveArchived / nextGroupKey",
+      "权限预设：svcPermissionPresets / permissionCatalog / applyPreset / currentPreset / applyGroupPreset",
+      "api：listGroups / setGroupPolicy / createGroup / deleteGroup / restoreGroup / switchGroup / repairGroups",
+      "注：linkTimer（20s 权限兜底）与 K.linkedSessions / K.lastWsPruneAt 初始化仍留在 index.js 原位"
+    ],
+    "move": [
+      { "s": 1660, "e": 1833, "first": "会话 → Workspace 挂载", "last": "}" }
+    ],
+    "stay": [
+      { "s": 1736, "e": 1758 }
+    ],
+    "api": [
+      { "s": 3015, "e": 3039, "first": "会话组管理（FR-01", "last": "}," },
+      { "s": 3355, "e": 3372, "first": "设置某组权限预设", "last": "}," },
+      { "s": 3374, "e": 3433, "first": "async createGroup", "last": "}," },
+      { "s": 3435, "e": 3465, "first": "async deleteGroup", "last": "}," },
+      { "s": 3502, "e": 3530, "first": "恢复归档组", "last": "}," },
+      { "s": 3532, "e": 3553, "first": "async switchGroup", "last": "}," },
+      { "s": 3555, "e": 3604, "first": "自愈：编号连续性", "last": "}," }
+    ]
+  }
+}
